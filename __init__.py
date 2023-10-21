@@ -13,6 +13,10 @@ else:
 	# DiT
 	from .DiT.nodes import NODE_CLASS_MAPPINGS as DiT_Nodes
 	NODE_CLASS_MAPPINGS.update(DiT_Nodes)
-	
+
+	# VAE
+	from .VAE.nodes import NODE_CLASS_MAPPINGS as VAE_Nodes
+	NODE_CLASS_MAPPINGS.update(VAE_Nodes)
+
 	NODE_DISPLAY_NAME_MAPPINGS = {k:v.TITLE for k,v in NODE_CLASS_MAPPINGS.items()}
 	__all__ = ['NODE_CLASS_MAPPINGS', 'NODE_DISPLAY_NAME_MAPPINGS']
