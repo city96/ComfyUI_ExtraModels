@@ -18,6 +18,7 @@ Simply clone this repo to your custom_nodes folder using the following command: 
 1. Download the original model weights from the [DiT Repo](https://github.com/facebookresearch/DiT) or the converted [FP16 safetensor ones from Huggingface](https://huggingface.co/city96/DiT/tree/main).
 2. Place them in `ComfyUI\models\dit` (created on first run after installing the extension)
 3. Load the model and select the class labels as shown in the image below
+4. **Make sure to use the Empty label conditioning for the Negative input of the KSampler!**
 
 ConditioningCombine nodes *should* work for combining multiple labels. The area ones don't since the model currently can't handle dynamic input dimensions.
 
