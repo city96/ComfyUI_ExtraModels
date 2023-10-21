@@ -3,7 +3,6 @@ import comfy.sd
 import comfy.utils
 from comfy import model_management
 from comfy import diffusers_convert
-from .models.kl import AutoencoderKL
 
 vae_dtype_dict = {
 	"auto" : model_management.vae_device(),
@@ -22,7 +21,11 @@ class EXVAE(comfy.sd.VAE):
 		self.latent_scale = model_conf["embed_scale"]
 
 		if model_conf["type"] == "AutoencoderKL":
+			from .models.kl import AutoencoderKL
 			model = AutoencoderKL(config=model_conf)
+		if model_conf["type"] == "VQModel":
+			from .models.vq import VQModel
+			model = VQModel(config=model_conf)
 
 		self.first_stage_model = model.eval()
 		m, u = self.first_stage_model.load_state_dict(sd, strict=False)
