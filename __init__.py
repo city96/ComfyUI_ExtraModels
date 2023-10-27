@@ -14,6 +14,10 @@ else:
 	from .DiT.nodes import NODE_CLASS_MAPPINGS as DiT_Nodes
 	NODE_CLASS_MAPPINGS.update(DiT_Nodes)
 
+	# T5
+	from .T5.nodes import NODE_CLASS_MAPPINGS as T5_Nodes
+	NODE_CLASS_MAPPINGS.update(T5_Nodes)
+
 	# VAE
 	from .VAE.nodes import NODE_CLASS_MAPPINGS as VAE_Nodes
 	NODE_CLASS_MAPPINGS.update(VAE_Nodes)
