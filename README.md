@@ -6,6 +6,7 @@ This repository aims to add support for various random image diffusion models to
 
 Simply clone this repo to your custom_nodes folder using the following command: `git clone https://github.com/city96/ComfyUI_ExtraModels custom_nodes/ComfyUI_ExtraModels`.
 
+
 ## DiT
 ### Model info / implementation
 - Uses class labels instead of prompts
@@ -25,6 +26,22 @@ ConditioningCombine nodes *should* work for combining multiple labels. The area 
 [Image with sample workflow](https://github.com/city96/ComfyUI_ExtraModels/assets/125218114/33bfb812-23ea-4bb0-b1e2-082756e53010)
 
 ![DIT_WORKFLOW_IMG](https://github.com/city96/ComfyUI_ExtraModels/assets/125218114/cdd4ec94-b0eb-436a-bf23-a3bcef8d7b90)
+
+
+## PixArt
+
+This is mostly a proof of concept, as the model weights have not been released officially. [Sample workflow here](https://github.com/city96/ComfyUI_ExtraModels/files/13192747/PixArt.json)
+
+Make sure to `pip install timm==0.6.13`. xformers is optional but strongly recommended as torch SDP is only partially implemented, if that.
+
+Limitations:
+- The default `KSampler` uses a different noise schedule/sampling algo (I think), so it most likely won't work as expected.
+- `PixArt DPM Sampler` requires the negative prompt to be shorter than the positive prompt.
+- `PixArt DPM Sampler` can only work with a batch size of 1.
+- `PixArt T5 Text Encode` is from the reference implementation, therefore it doesn't support weights. `T5 Text Encode` support weights, but I can't attest to the correctness of the implementation.
+
+PixArt uses the same T5v1.1-xxl text encoder as DeepFloyd, so the T5 section of the readme also applies.
+
 
 ## T5
 ### Model
@@ -48,18 +65,6 @@ Loaded in bnb4bit mode, it only takes around 6GB VRAM, making it work with 12GB 
 On windows, you may need a newer version of bitsandbytes for 4bit. Try `python -m pip install bitsandbytes --prefer-binary --extra-index-url=https://jllllll.github.io/bitsandbytes-windows-webui`
 
 You may also need to upgrade transformers. `pip install --upgrade transformers`
-
-## PixArt
-
-This is mostly a proof of concept, as the model weights have not been released officially. [Sample workflow here](https://github.com/city96/ComfyUI_ExtraModels/files/13192747/PixArt.json)
-
-Make sure to `pip install timm==0.6.13`. xformers is optional but strongly recommended as torch SDP is only partially implemented, if that.
-
-Limitations:
-- The default `KSampler` uses a different noise schedule/sampling algo (I think), so it most likely won't work as expected.
-- `PixArt DPM Sampler` requires the negative prompt to be shorter than the positive prompt.
-- `PixArt DPM Sampler` can only work with a batch size of 1.
-- `PixArt T5 Text Encode` is from the reference implementation, therefore it doesn't support weights. `T5 Text Encode` support weights, but I can't attest to the correctness of the implementation.
 
 
 ## VAE
