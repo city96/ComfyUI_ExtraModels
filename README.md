@@ -64,7 +64,7 @@ Loaded in bnb4bit mode, it only takes around 6GB VRAM, making it work with 12GB 
 
 On windows, you may need a newer version of bitsandbytes for 4bit. Try `python -m pip install bitsandbytes --prefer-binary --extra-index-url=https://jllllll.github.io/bitsandbytes-windows-webui`
 
-You may also need to upgrade transformers. `pip install --upgrade transformers`
+You may also need to upgrade transformers and install spiece for the tokenizer. `pip install -r requirements.txt`
 
 
 ## VAE
