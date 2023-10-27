@@ -14,6 +14,10 @@ else:
 	from .DiT.nodes import NODE_CLASS_MAPPINGS as DiT_Nodes
 	NODE_CLASS_MAPPINGS.update(DiT_Nodes)
 
+	# PixArt
+	from .PixArt.nodes import NODE_CLASS_MAPPINGS as PixArt_Nodes
+	NODE_CLASS_MAPPINGS.update(PixArt_Nodes)
+
 	# T5
 	from .T5.nodes import NODE_CLASS_MAPPINGS as T5_Nodes
 	NODE_CLASS_MAPPINGS.update(T5_Nodes)
