@@ -13,7 +13,6 @@ import torch
 import torch.nn as nn
 from timm.models.vision_transformer import Mlp, Attention as Attention_
 from einops import rearrange, repeat
-import xformers.ops
 
 from .utils import add_decomposed_rel_pos
 from comfy import model_management
