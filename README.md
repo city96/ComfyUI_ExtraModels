@@ -6,6 +6,29 @@ This repository aims to add support for various random image diffusion models to
 
 Simply clone this repo to your custom_nodes folder using the following command: `git clone https://github.com/city96/ComfyUI_ExtraModels custom_nodes/ComfyUI_ExtraModels`.
 
+### Portable install
+
+I haven't tested this completely, so if you know what you're doing, use the regular VEVN/`git clone` install option when installing ComfyUI.
+
+Go to the where you unpacked `ComfyUI_windows_portable` to (where your run_nvidia_gpu.bat file is) and open a command line window. Press `CTRL+SHIFT+Right click` in an empty space and click "Open PowerShell window here".
+
+In case you haven't installed in through the manager, run `git clone https://github.com/city96/ComfyUI_ExtraModels .\ComfyUI\custom_nodes\ComfyUI_ExtraModels`
+
+To install the requirements on windows, run these commands in the same window:
+```
+.\python_embeded\python.exe -m pip install -r  .\ComfyUI\custom_nodes\ComfyUI_ExtraModels\requirements.txt
+.\python_embeded\python.exe -m pip install bitsandbytes --prefer-binary --extra-index-url=https://jllllll.github.io/bitsandbytes-windows-webui
+```
+
+To update, open the command line window like before and run the following commands:
+
+```
+cd .\ComfyUI\custom_nodes\ComfyUI_ExtraModels\
+git pull
+```
+
+Alternatively, use the manager, assuming it has an update function.
+
 
 ## DiT
 ### Model info / implementation
