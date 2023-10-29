@@ -137,7 +137,8 @@ class PixArtT5TextEncode:
 		masked_embs, keep_index = self.mask_feature(
 			embs.detach().to("cpu"),
 			mask.detach().to("cpu")
-		).squeeze(0) # match CLIP/internal
+		)
+		masked_embs = masked_embs.squeeze(0) # match CLIP/internal
 		print("Encoded T5:", masked_embs.shape)
 		return ([[masked_embs, {}]], )
 
