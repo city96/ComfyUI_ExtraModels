@@ -78,7 +78,7 @@ class DiTCondLabelSelect:
 		global label_data
 		class_labels = [int(k) for k,v in label_data.items() if v == label_name]
 		y = torch.tensor([[class_labels[0]]]).to(torch.int)
-		return ([[y, {"pooled_output": []}]], )
+		return ([[y, {}]], )
 
 class DiTCondLabelEmpty:
 	@classmethod
@@ -100,7 +100,7 @@ class DiTCondLabelEmpty:
 		# [ID of last class + 1] == [num_classes]
 		y_null = model.model.dit_config["num_classes"]
 		y = torch.tensor([[y_null]]).to(torch.int)
-		return ([[y, {"pooled_output": []}]], )
+		return ([[y, {}]], )
 
 NODE_CLASS_MAPPINGS = {
 	"DitCheckpointLoader" : DitCheckpointLoader,
