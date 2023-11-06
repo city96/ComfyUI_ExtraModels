@@ -31,6 +31,9 @@ Alternatively, use the manager, assuming it has an update function.
 
 
 ## DiT
+
+[Original Repo](https://github.com/facebookresearch/DiT)
+
 ### Model info / implementation
 - Uses class labels instead of prompts
 - Limited to 256x256 or 512x512 images
@@ -52,6 +55,9 @@ ConditioningCombine nodes *should* work for combining multiple labels. The area 
 
 
 ## PixArt
+
+[Original Repo](https://github.com/PixArt-alpha/PixArt-alpha)
+
 ### Model info / implementation
 - Uses T5 text encoder instead of clip
 - Available in 512 and 1024 versions, needs specific pre-defined resolutions to work correctly
@@ -110,6 +116,17 @@ On windows, you may need a newer version of bitsandbytes for 4bit. Try `python -
 ## VAE
 
 A few custom VAE models are supported. The option to select a different dtype when loading is also possible, which can be useful for testing/comparisons.
+
+### Consistency Decoder
+
+[Original Repo](https://github.com/openai/consistencydecoder)
+
+Proof of concept until [the model definitions are released](https://github.com/openai/consistencydecoder/issues/1)
+
+- Download the VAE from [the link in the OpenAI code](https://github.com/openai/consistencydecoder/blob/main/consistencydecoder/__init__.py#L79) / [Direct link](https://openaipublic.azureedge.net/diff-vae/c9cebd3132dd9c42936d803e33424145a748843c8f716c0814838bdc8a2fe7cb/decoder.pt)
+- Put the file in your VAE folder
+- Load it with the ExtraVAELoader
+- Run out of VRAM
 
 ### AutoencoderKL / VQModel
 
