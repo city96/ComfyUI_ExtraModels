@@ -8,7 +8,7 @@ Simply clone this repo to your custom_nodes folder using the following command: 
 
 ### Portable install
 
-I haven't tested this completely, so if you know what you're doing, use the regular VEVN/`git clone` install option when installing ComfyUI.
+I haven't tested this completely, so if you know what you're doing, use the regular venv/`git clone` install option when installing ComfyUI.
 
 Go to the where you unpacked `ComfyUI_windows_portable` to (where your run_nvidia_gpu.bat file is) and open a command line window. Press `CTRL+SHIFT+Right click` in an empty space and click "Open PowerShell window here".
 
@@ -52,10 +52,18 @@ ConditioningCombine nodes *should* work for combining multiple labels. The area 
 
 
 ## PixArt
+### Model info / implementation
+- Uses T5 text encoder instead of clip
+- Available in 512 and 1024 versions, needs specific pre-defined resolutions to work correctly
+- Same latent space as SD1.5 (works with the SD1.5 VAE)
+- Attention needs optimization, images look worse without xformers.
 
-This is mostly a proof of concept, as the model weights have not been released officially. [Sample workflow here](https://github.com/city96/ComfyUI_ExtraModels/files/13192747/PixArt.json)
+### Usage
 
-Make sure to `pip install timm==0.6.13`. xformers is optional but strongly recommended as torch SDP is only partially implemented, if that.
+1. Download the model weights from the [PixArt alpha repo](https://huggingface.co/PixArt-alpha/PixArt-alpha/tree/main) - you most likely want the 1024px one - `PixArt-XL-2-1024-MS.pth`
+2. Place them in your checkpoints folder
+3. Load them with the correct PixArt checkpoint loader
+4. Follow the T5 section of this readme to set up the T5 text encoder
 
 Limitations:
 - The default `KSampler` uses a different noise schedule/sampling algo (I think), so it most likely won't work as expected.
@@ -65,6 +73,14 @@ Limitations:
 
 PixArt uses the same T5v1.1-xxl text encoder as DeepFloyd, so the T5 section of the readme also applies.
 
+> [!IMPORTANT]  
+> Make sure to `pip install timm==0.6.13` (or alternatively, `pip install -r requirements.txt` in the folder where the extension is)
+> 
+> Installing `xformers` is optional but strongly recommended as torch SDP is only partially implemented, if that.
+
+[Sample workflow here](https://github.com/city96/ComfyUI_ExtraModels/files/13192747/PixArt.json)
+
+![PixArtT10](https://github.com/city96/ComfyUI_ExtraModels/assets/125218114/e709da33-d313-43a0-bdbf-b6e84bde14e7)
 
 ## T5
 ### Model
@@ -87,7 +103,8 @@ Loaded in bnb4bit mode, it only takes around 6GB VRAM, making it work with 12GB 
 
 On windows, you may need a newer version of bitsandbytes for 4bit. Try `python -m pip install bitsandbytes --prefer-binary --extra-index-url=https://jllllll.github.io/bitsandbytes-windows-webui`
 
-You may also need to upgrade transformers and install spiece for the tokenizer. `pip install -r requirements.txt`
+> [!IMPORTANT]  
+> You may also need to upgrade transformers and install spiece for the tokenizer. `pip install -r requirements.txt`
 
 
 ## VAE
