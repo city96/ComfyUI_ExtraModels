@@ -105,4 +105,10 @@ vae_conf = {
 		"num_res_blocks"   : 2,
 		"attn_resolutions" : [16],
 	},
+	# OpenAI Consistency Decoder
+	"Consistency-Decoder": {
+		"type" : "ConsistencyDecoder",
+		"embed_scale"      : 8,
+		"embed_dim"        : 4,
+	}
 }

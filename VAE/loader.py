@@ -13,29 +13,36 @@ vae_dtype_dict = {
 
 class EXVAE(comfy.sd.VAE):
 	def __init__(self, model_path, model_conf, dtype=None):
-		sd = comfy.utils.load_torch_file(model_path)
-		if 'decoder.up_blocks.0.resnets.0.norm1.weight' in sd.keys(): #diffusers format
-			sd = diffusers_convert.convert_vae_state_dict(sd)
-
 		self.latent_dim   = model_conf["embed_dim"]
 		self.latent_scale = model_conf["embed_scale"]
-
-		if model_conf["type"] == "AutoencoderKL":
-			from .models.kl import AutoencoderKL
-			model = AutoencoderKL(config=model_conf)
-		if model_conf["type"] == "VQModel":
-			from .models.vq import VQModel
-			model = VQModel(config=model_conf)
-
-		self.first_stage_model = model.eval()
-		m, u = self.first_stage_model.load_state_dict(sd, strict=False)
-		if len(m) > 0: print("Missing VAE keys", m)
-		if len(u) > 0: print("Leftover VAE keys", u)
-
 		self.device = model_management.vae_device()
 		self.offload_device = model_management.vae_offload_device()
 		self.vae_dtype = vae_dtype_dict.get(dtype, "auto")
-		self.first_stage_model.to(self.vae_dtype)
+
+		sd = None
+		model = None
+		if model_conf["type"] == "AutoencoderKL":
+			from .models.kl import AutoencoderKL
+			model = AutoencoderKL(config=model_conf)
+			sd = comfy.utils.load_torch_file(model_path)
+		if model_conf["type"] == "VQModel":
+			from .models.vq import VQModel
+			model = VQModel(config=model_conf)
+			sd = comfy.utils.load_torch_file(model_path)
+		if model_conf["type"] == "ConsistencyDecoder":
+			from .models.consistencydecoder import ConsistencyDecoder
+			model = ConsistencyDecoder(model_path, self.device)
+			sd = model.ckpt.state_dict()
+
+		if sd:
+			if 'decoder.up_blocks.0.resnets.0.norm1.weight' in sd.keys():
+				sd = diffusers_convert.convert_vae_state_dict(sd)
+			self.first_stage_model = model.eval()
+			m, u = self.first_stage_model.load_state_dict(sd, strict=False)
+			if len(m) > 0: print("Missing VAE keys", m)
+			if len(u) > 0: print("Leftover VAE keys", u)
+
+		self.first_stage_model.to(self.vae_dtype).to(self.offload_device)
 
 	### Encode/Decode functions below needed due to source repo having 4 VAE channels and a scale factor of 8 hardcoded
 	def decode_tiled_(self, samples, tile_x=64, tile_y=64, overlap = 16):
@@ -106,4 +113,3 @@ class EXVAE(comfy.sd.VAE):
 
 		self.first_stage_model = self.first_stage_model.to(self.offload_device)
 		return samples
-
