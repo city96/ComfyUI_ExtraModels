@@ -121,12 +121,13 @@ A few custom VAE models are supported. The option to select a different dtype wh
 
 [Original Repo](https://github.com/openai/consistencydecoder)
 
-Proof of concept until [the model definitions are released](https://github.com/openai/consistencydecoder/issues/1)
+This now works thanks to the work of @mrsteyk and @madebyollin - [Gist with more info](https://gist.github.com/madebyollin/865fa6a18d9099351ddbdfbe7299ccbf).
 
-- Download the VAE from [the link in the OpenAI code](https://github.com/openai/consistencydecoder/blob/main/consistencydecoder/__init__.py#L79) / [Direct link](https://openaipublic.azureedge.net/diff-vae/c9cebd3132dd9c42936d803e33424145a748843c8f716c0814838bdc8a2fe7cb/decoder.pt)
+- Download the converted safetensor VAE from [this HF repository](https://huggingface.co/mrsteyk/consistency-decoder-sd15/blob/main/stk_consistency_decoder_amalgamated.safetensors). If you downloaded the OpenAI model before, it won't work, as it is a TorchScript file. Feel free to delete it.
 - Put the file in your VAE folder
 - Load it with the ExtraVAELoader
-- Run out of VRAM
+- Set it to fp16 or bf16 to not run out of VRAM
+- Use tiled VAE decode if required
 
 ### AutoencoderKL / VQModel
 

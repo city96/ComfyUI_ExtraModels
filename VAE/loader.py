@@ -19,28 +19,27 @@ class EXVAE(comfy.sd.VAE):
 		self.offload_device = model_management.vae_offload_device()
 		self.vae_dtype = vae_dtype_dict.get(dtype, "auto")
 
-		sd = None
+		sd = comfy.utils.load_torch_file(model_path)
 		model = None
 		if model_conf["type"] == "AutoencoderKL":
 			from .models.kl import AutoencoderKL
 			model = AutoencoderKL(config=model_conf)
-			sd = comfy.utils.load_torch_file(model_path)
-		if model_conf["type"] == "VQModel":
-			from .models.vq import VQModel
-			model = VQModel(config=model_conf)
-			sd = comfy.utils.load_torch_file(model_path)
-		if model_conf["type"] == "ConsistencyDecoder":
-			from .models.consistencydecoder import ConsistencyDecoder
-			model = ConsistencyDecoder(model_path, self.device)
-			sd = model.ckpt.state_dict()
-
-		if sd:
 			if 'decoder.up_blocks.0.resnets.0.norm1.weight' in sd.keys():
 				sd = diffusers_convert.convert_vae_state_dict(sd)
-			self.first_stage_model = model.eval()
-			m, u = self.first_stage_model.load_state_dict(sd, strict=False)
-			if len(m) > 0: print("Missing VAE keys", m)
-			if len(u) > 0: print("Leftover VAE keys", u)
+		elif model_conf["type"] == "VQModel":
+			from .models.vq import VQModel
+			model = VQModel(config=model_conf)
+		elif model_conf["type"] == "ConsistencyDecoder":
+			from .models.consistencydecoder import ConsistencyDecoder
+			model = ConsistencyDecoder()
+			sd = {f"model.{k}":v for k,v in sd.items()}
+		else:
+			raise NotImplementedError(f"Unknown VAE type '{model_conf['type']}'")
+
+		self.first_stage_model = model.eval()
+		m, u = self.first_stage_model.load_state_dict(sd, strict=False)
+		if len(m) > 0: print("Missing VAE keys", m)
+		if len(u) > 0: print("Leftover VAE keys", u)
 
 		self.first_stage_model.to(self.vae_dtype).to(self.offload_device)
 
