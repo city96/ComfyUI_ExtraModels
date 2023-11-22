@@ -110,5 +110,21 @@ vae_conf = {
 		"type" : "ConsistencyDecoder",
 		"embed_scale"      : 8,
 		"embed_dim"        : 4,
+	},
+	# SAI Video Decoder
+	"SDV-VideoDecoder": {
+		"type"             : "AutoencoderKL-VideoDecoder",
+		"embed_scale"      : 8,
+		"embed_dim"        : 4,
+		"z_channels"       : 4,
+		"double_z"         : True,
+		"resolution"       : 256,
+		"in_channels"      : 3,
+		"out_ch"           : 3,
+		"ch"               : 128, 
+		"ch_mult"          : [1,2,4,4],
+		"num_res_blocks"   : 2,
+		"attn_resolutions" : [],
+		"video_kernel_size": [3, 1, 1]
 	}
 }

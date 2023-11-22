@@ -129,6 +129,23 @@ This now works thanks to the work of @mrsteyk and @madebyollin - [Gist with more
 - Set it to fp16 or bf16 to not run out of VRAM
 - Use tiled VAE decode if required
 
+### Deflickering Decoder / VideoDecoder
+
+This is the VAE that comes baked into the [Stable Video Diffusion](https://stability.ai/news/stable-video-diffusion-open-ai-video-model) model.
+
+It doesn't seem particularly good as a normal VAE (color issues, pretty bad with finer details). Parts of it also seem to be missing weights and/or are never called, so I'm not even sure it does anything special with batch sizes greater than 1 (i.e. the deflickering part).
+
+Still for completeness sake the code to run it is mostly implemented. To obtain the weights just extract them from the sdv model:
+
+```py
+from safetensors.torch import load_file, save_file
+
+pf = "first_stage_model." # Key prefix
+sd = load_file("svd_xt.safetensors")
+vae = {k.replace(pf, ''):v for k,v in sd.items() if k.startswith(pf)}
+save_file(vae, "svd_xt_vae.safetensors")
+```
+
 ### AutoencoderKL / VQModel
 
 `kl-f4/8/16/32` from the [compvis/latent diffusion repo](https://github.com/CompVis/latent-diffusion/tree/main#pretrained-autoencoding-models).

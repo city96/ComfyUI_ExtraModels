@@ -26,6 +26,9 @@ class EXVAE(comfy.sd.VAE):
 			model = AutoencoderKL(config=model_conf)
 			if 'decoder.up_blocks.0.resnets.0.norm1.weight' in sd.keys():
 				sd = diffusers_convert.convert_vae_state_dict(sd)
+		elif model_conf["type"] == "AutoencoderKL-VideoDecoder":
+			from .models.temporal_ae import AutoencoderKL
+			model = AutoencoderKL(config=model_conf)
 		elif model_conf["type"] == "VQModel":
 			from .models.vq import VQModel
 			model = VQModel(config=model_conf)
