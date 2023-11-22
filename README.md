@@ -133,7 +133,7 @@ This now works thanks to the work of @mrsteyk and @madebyollin - [Gist with more
 
 This is the VAE that comes baked into the [Stable Video Diffusion](https://stability.ai/news/stable-video-diffusion-open-ai-video-model) model.
 
-It doesn't seem particularly good as a normal VAE (color issues, pretty bad with finer details). Parts of it also seem to be missing weights and/or are never called, so I'm not even sure it does anything special with batch sizes greater than 1 (i.e. the deflickering part).
+It doesn't seem particularly good as a normal VAE (color issues, pretty bad with finer details).
 
 Still for completeness sake the code to run it is mostly implemented. To obtain the weights just extract them from the sdv model:
 

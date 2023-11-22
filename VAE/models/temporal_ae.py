@@ -9,7 +9,7 @@ from comfy import model_management
 from .kl import (
 	Encoder, Decoder, Upsample, Normalize,
 	AttnBlock, ResnetBlock, #MemoryEfficientAttnBlock, 
-	DiagonalGaussianDistribution, nonlinearity
+	DiagonalGaussianDistribution, nonlinearity, make_attn
 )
 
 class AutoencoderKL(nn.Module):
@@ -130,11 +130,9 @@ class VideoDecoder(nn.Module):
 			alpha=self.alpha,
 			merge_strategy=self.merge_strategy,
 		)
-		self.mid.attn_1 = make_time_attn(
+		self.mid.attn_1 = make_attn(
 			block_in,
 			attn_type=attn_type,
-			alpha=self.alpha,
-			merge_strategy=self.merge_strategy,
 		)
 		self.mid.block_2 = VideoResBlock(
 			in_channels=block_in,
@@ -211,7 +209,7 @@ class VideoDecoder(nn.Module):
 
 		# middle
 		h = self.mid.block_1(h, temb, **kwargs)
-		h = self.mid.attn_1(h, **kwargs)
+		h = self.mid.attn_1(h)
 		h = self.mid.block_2(h, temb, **kwargs)
 
 		# upsampling
