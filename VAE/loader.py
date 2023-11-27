@@ -4,20 +4,13 @@ import comfy.utils
 from comfy import model_management
 from comfy import diffusers_convert
 
-vae_dtype_dict = {
-	"auto" : model_management.vae_device(),
-	"fp32" : torch.float32,
-	"fp16" : torch.float16,
-	"bf16" : torch.bfloat16,
-}
-
 class EXVAE(comfy.sd.VAE):
-	def __init__(self, model_path, model_conf, dtype=None):
+	def __init__(self, model_path, model_conf, dtype=torch.float32):
 		self.latent_dim   = model_conf["embed_dim"]
 		self.latent_scale = model_conf["embed_scale"]
 		self.device = model_management.vae_device()
 		self.offload_device = model_management.vae_offload_device()
-		self.vae_dtype = vae_dtype_dict.get(dtype, "auto")
+		self.vae_dtype = dtype
 
 		sd = comfy.utils.load_torch_file(model_path)
 		model = None
@@ -104,7 +97,7 @@ class EXVAE(comfy.sd.VAE):
 			free_memory = model_management.get_free_memory(self.device)
 			batch_number = int(free_memory / memory_used)
 			batch_number = max(1, batch_number)
-			samples = torch.empty((pixel_samples.shape[0], self.first_stage_model.embed_dim, round(pixel_samples.shape[2] // self.latent_scale), round(pixel_samples.shape[3] // self.latent_scale)), device="cpu")
+			samples = torch.empty((pixel_samples.shape[0], self.latent_dim, round(pixel_samples.shape[2] // self.latent_scale), round(pixel_samples.shape[3] // self.latent_scale)), device="cpu")
 			for x in range(0, pixel_samples.shape[0], batch_number):
 				pixels_in = (2. * pixel_samples[x:x+batch_number] - 1.).to(self.vae_dtype).to(self.device)
 				samples[x:x+batch_number] = self.first_stage_model.encode(pixels_in).cpu().float()

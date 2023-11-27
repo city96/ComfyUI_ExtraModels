@@ -20,16 +20,19 @@ class T5v11Model(torch.nn.Module):
 
         self.num_layers = 24
         self.max_length = max_length
+        self.bnb = False
+
         if textmodel_path is not None:
             model_args = {}
             model_args["low_cpu_mem_usage"] = True # Don't take 2x system ram on cpu
-            if device == "bnb8bit":
+            if dtype == "bnb8bit":
                 self.bnb = True
                 model_args["load_in_8bit"] = True
-            elif device == "bnb4bit":
+            elif dtype == "bnb4bit":
                 self.bnb = True
                 model_args["load_in_4bit"] = True
             else:
+                if dtype: model_args["torch_dtype"] = dtype
                 self.bnb = False
                 # TODO: custom device map?
             print(f"Loading T5 from '{textmodel_path}'")
@@ -45,10 +48,6 @@ class T5v11Model(torch.nn.Module):
             with comfy.ops.use_comfy_ops(device, dtype):
                 with modeling_utils.no_init_weights():
                     self.transformer = T5EncoderModel(config)
-
-        if dtype is not None and not self.bnb:
-            self.transformer.to(dtype)
-            self.transformer.encoder.embeddings.embed_tokens.to(torch.float32)
 
         if freeze:
             self.freeze()

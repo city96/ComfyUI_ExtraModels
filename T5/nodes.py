@@ -4,6 +4,7 @@ import torch
 import folder_paths
 
 from .loader import load_t5
+from ..utils.dtype import string_to_dtype, dtype_list
 
 # initialize custom folder path
 # TODO: integrate with `extra_model_paths.yaml`
@@ -24,7 +25,8 @@ class T5v11Loader:
 				"t5v11_name": (folder_paths.get_filename_list("t5"),),
 				"t5v11_ver": (["xxl"],),
 				"path_type": (["folder", "file"],),
-				"device": (["auto", "cpu", "bnb8bit", "bnb4bit"],{"default":"cpu"})
+				"device": (["auto", "cpu", "gpu"],{"default":"cpu"}),
+				"dtype": (dtype_list,),
 			}
 		}
 	RETURN_TYPES = ("T5",)
@@ -32,13 +34,20 @@ class T5v11Loader:
 	CATEGORY = "ExtraModels/T5"
 	TITLE = "T5v1.1 Loader"
 
-	def load_model(self, t5v11_name, t5v11_ver, path_type, device):
+	def load_model(self, t5v11_name, t5v11_ver, path_type, device, dtype):
+		if "bnb" in dtype:
+			assert device == "gpu", "BitsAndBytes only works on CUDA! Set device to 'gpu'."
+		dtype = string_to_dtype(dtype, "text_encoder")
+		if device == "cpu":
+			assert dtype in [None, torch.float32], f"Can't use dtype '{dtype}' with CPU! Set dtype to 'default'."
+
 		return (load_t5(
 			model_type = "t5v11",
 			model_ver  = t5v11_ver,
 			model_path = folder_paths.get_full_path("t5", t5v11_name),
 			path_type  = path_type,
 			device     = device,
+			dtype      = dtype,
 		),)
 
 class T5TextEncode:

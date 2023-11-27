@@ -8,7 +8,7 @@ import folder_paths
 from .t5v11 import T5v11Model, T5v11Tokenizer
 
 class EXM_T5v11:
-	def __init__(self, textmodel_ver="xxl", embedding_directory=None, textmodel_path=None, no_init=False, device="cpu"):
+	def __init__(self, textmodel_ver="xxl", embedding_directory=None, textmodel_path=None, no_init=False, device="cpu", dtype=None):
 		if no_init:
 			return
 
@@ -17,22 +17,27 @@ class EXM_T5v11:
 			self.load_device = model_management.text_encoder_device()
 			self.offload_device = model_management.text_encoder_offload_device()
 			self.init_device = "cpu"
-		elif device == "bnb8bit":
+		elif dtype == "bnb8bit":
 			# BNB doesn't support size enum
 			size = 12.4 * (1024**3)
 			# Or moving between devices
 			self.load_device = model_management.get_torch_device()
 			self.offload_device = self.load_device
 			self.init_device = self.load_device
-		elif device == "bnb4bit":
+		elif dtype == "bnb4bit":
 			# This seems to use the same VRAM as 8bit on Pascal?
 			size = 6.2 * (1024**3)
 			self.load_device = model_management.get_torch_device()
 			self.offload_device = self.load_device
 			self.init_device = self.load_device
+		elif device == "cpu":
+			size = 0
+			self.load_device = "cpu"
+			self.offload_device = "cpu"
+			self.init_device="cpu"
 		else:
 			size = 0
-			self.load_device = device
+			self.load_device = model_management.get_torch_device()
 			self.offload_device = "cpu"
 			self.init_device="cpu"
 
@@ -40,6 +45,7 @@ class EXM_T5v11:
 			textmodel_ver  = textmodel_ver,
 			textmodel_path = textmodel_path,
 			device         = device,
+			dtype          = dtype,
 		)
 		self.tokenizer = T5v11Tokenizer(embedding_directory=embedding_directory)
 		self.patcher = comfy.model_patcher.ModelPatcher(
@@ -86,11 +92,13 @@ class EXM_T5v11:
 		return self.patcher.get_key_patches()
 
 
-def load_t5(model_type, model_ver, model_path, path_type="file", device="cpu"):
+def load_t5(model_type, model_ver, model_path, path_type="file", device="cpu", dtype=None):
 	assert model_type in ["t5v11"] # Only supported model for now
-	model_args = {}
-	model_args["textmodel_ver"] = model_ver
-	model_args["device"] = device
+	model_args = {
+		"textmodel_ver" : model_ver,
+		"device" : device,
+		"dtype"  : dtype,
+	}
 
 	if path_type == "folder":
 		# pass directly to transformers and initialize there

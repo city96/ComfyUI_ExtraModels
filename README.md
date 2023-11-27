@@ -84,7 +84,7 @@ PixArt uses the same T5v1.1-xxl text encoder as DeepFloyd, so the T5 section of 
 > 
 > Installing `xformers` is optional but strongly recommended as torch SDP is only partially implemented, if that.
 
-[Sample workflow here](https://github.com/city96/ComfyUI_ExtraModels/files/13192747/PixArt.json)
+[Sample workflow here](https://github.com/city96/ComfyUI_ExtraModels/files/13481704/PixArtV2.json)
 
 ![PixArtT10](https://github.com/city96/ComfyUI_ExtraModels/assets/125218114/e709da33-d313-43a0-bdbf-b6e84bde14e7)
 
