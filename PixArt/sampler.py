@@ -38,7 +38,7 @@ def sample_pixart(model, seed, steps, cfg, noise_schedule, noise_schedule_vp, po
 	previewer = latent_preview.get_previewer(model.load_device, model.model.latent_format)
 
 	## Noise schedule.
-	betas = torch.tensor(gd.get_named_beta_schedule(noise_schedule, steps))
+	betas = torch.tensor(gd.get_named_beta_schedule(noise_schedule, 1000))
 	noise_schedule = NoiseScheduleVP(schedule=noise_schedule_vp, betas=betas)
 
 	## Convert your discrete-time `model` to the continuous-time

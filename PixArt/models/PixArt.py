@@ -128,7 +128,9 @@ class PixArt(nn.Module):
         t = self.t_embedder(t)  # (N, D)
         t0 = self.t_block(t)
         y = self.y_embedder(y, self.training)  # (N, 1, L, D)
-        if self.training:
+        if mask is not None:
+            if mask.shape[0] != y.shape[0]:
+                mask = mask.repeat(y.shape[0] // mask.shape[0], 1)
             mask = mask.squeeze(1).squeeze(1)
             y = y.squeeze(1).masked_select(mask.unsqueeze(-1) != 0).view(1, -1, x.shape[-1])
             y_lens = mask.sum(dim=1).tolist()
