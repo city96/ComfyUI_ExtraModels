@@ -3,22 +3,38 @@ List of all PixArt model types / settings
 """
 pixart_conf = {
 	"PixArtMS_XL_2": { # models/PixArtMS
-		"target"      : "PixArtMS",
-		"input_size"  : 1024//8,
-		"lewei_scale" :    2,
-		"depth"       :   28,
-		"num_heads"   :   16,
-		"patch_size"  :    2,
-		"hidden_size" : 1152,
+		"target": "PixArtMS",
+		"unet_config": {
+			"input_size"  : 1024//8,
+			"lewei_scale" :    2,
+			"depth"       :   28,
+			"num_heads"   :   16,
+			"patch_size"  :    2,
+			"hidden_size" : 1152,
+		},
+		"sampling_settings": {
+			"beta_schedule" : "sqrt_linear",
+			"linear_start"  : 0.0001,
+			"linear_end"    : 0.02,
+			"timesteps"     : 1000,
+		},
 	},
 	"PixArt_XL_2": { # models/PixArt
-		"target"      : "PixArt",
-		"input_size"  :  512//8,
-		"lewei_scale" :    1,
-		"depth"       :   28,
-		"num_heads"   :   16,
-		"patch_size"  :    2,
-		"hidden_size" : 1152,
+		"target": "PixArt",
+		"unet_config": {
+			"input_size"  :  512//8,
+			"lewei_scale" :    1,
+			"depth"       :   28,
+			"num_heads"   :   16,
+			"patch_size"  :    2,
+			"hidden_size" : 1152,
+		},
+		"sampling_settings": {
+			"beta_schedule" : "sqrt_linear",
+			"linear_start"  : 0.0001,
+			"linear_end"    : 0.02,
+			"timesteps"     : 1000,
+		},
 	},
 }
 

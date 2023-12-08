@@ -13,6 +13,14 @@ class EXM_PixArt(comfy.supported_models_base.BASE):
 	unet_extra_config = {}
 	latent_format = comfy.latent_formats.SD15
 
+	def __init__(self, model_conf):
+		self.model_target = model_conf.get("target")
+		self.unet_config = model_conf.get("unet_config", {})
+		self.sampling_settings = model_conf.get("sampling_settings", {})
+		self.latent_format = self.latent_format()
+		# UNET is handled by extension
+		self.unet_config["disable_unet_model_creation"] = True
+
 	def model_type(self, state_dict, prefix=""):
 		return comfy.model_base.ModelType.EPS
 
@@ -22,21 +30,23 @@ def load_pixart(model_path, model_conf):
 	parameters = comfy.utils.calculate_parameters(state_dict)
 	unet_dtype = model_management.unet_dtype(model_params=parameters)
 
+	model_conf = EXM_PixArt(model_conf) # convert to object
+
 	model = comfy.model_base.BaseModel(
-		EXM_PixArt({"disable_unet_model_creation" : True }),
+		model_conf,
 		model_type=comfy.model_base.ModelType.EPS,
 		device=model_management.get_torch_device()
 	)
 
 	model.pixart_config = model_conf
-	if model_conf["target"] == "PixArtMS":
+	if model_conf.model_target == "PixArtMS":
 		from .models.PixArtMS import PixArtMS
-		model.diffusion_model = PixArtMS(**model_conf)
-	elif model_conf["target"] == "PixArt":
+		model.diffusion_model = PixArtMS(**model_conf.unet_config)
+	elif model_conf.model_target == "PixArt":
 		from .models.PixArt import PixArt
-		model.diffusion_model = PixArt(**model_conf)
+		model.diffusion_model = PixArt(**model_conf.unet_config)
 	else:
-		raise NotImplementedError
+		raise NotImplementedError(f"Unknown model target '{model_conf.model_target}'")
 
 	model.diffusion_model.load_state_dict(state_dict)
 	model.diffusion_model.dtype = unet_dtype
