@@ -73,7 +73,7 @@ class MultiHeadCrossAttention(nn.Module):
             q, k, v = map(lambda t: t.permute(0, 2, 1, 3),(q, k, v),)
             
             attn_mask = None
-            if mask is not None:
+            if mask is not None and len(mask) > 1:
                 # This is probably wrong
                 attn_mask = torch.zeros(
                     [1, q.shape[1], q.shape[2], v.shape[2]],
