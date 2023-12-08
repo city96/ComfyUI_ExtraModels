@@ -6,23 +6,12 @@ import folder_paths
 from .conf import dit_conf
 from .loader import load_dit
 
-# initialize custom folder path
-# TODO: integrate with `extra_model_paths.yaml`
-os.makedirs(
-	os.path.join(folder_paths.models_dir,"dit"),
-	exist_ok = True,
-)
-folder_paths.folder_names_and_paths["dit"] = (
-	[os.path.join(folder_paths.models_dir,"dit")],
-	folder_paths.supported_pt_extensions
-)
-
 class DitCheckpointLoader:
 	@classmethod
 	def INPUT_TYPES(s):
 		return {
 			"required": {
-				"ckpt_name": (folder_paths.get_filename_list("dit"),),
+				"ckpt_name": (folder_paths.get_filename_list("checkpoints"),),
 				"model": (list(dit_conf.keys()),),
 				"image_size": ([256, 512],),
 				# "num_classes": ("INT", {"default": 1000, "min": 0,}),
@@ -35,10 +24,10 @@ class DitCheckpointLoader:
 	TITLE = "DitCheckpointLoader"
 
 	def load_checkpoint(self, ckpt_name, model, image_size):
-		ckpt_path = folder_paths.get_full_path("dit", ckpt_name)
+		ckpt_path = folder_paths.get_full_path("checkpoints", ckpt_name)
 		model_conf = dit_conf[model]
-		model_conf["input_size"]  = image_size // 8
-		# model_conf["num_classes"] = num_classes
+		model_conf["unet_config"]["input_size"]  = image_size // 8
+		# model_conf["unet_config"]["num_classes"] = num_classes
 		dit = load_dit(
 			model_path = ckpt_path,
 			model_conf = model_conf,
@@ -98,7 +87,7 @@ class DiTCondLabelEmpty:
 
 	def cond_empty(self, model):
 		# [ID of last class + 1] == [num_classes]
-		y_null = model.model.dit_config["num_classes"]
+		y_null = model.model.model_config.unet_config["num_classes"]
 		y = torch.tensor([[y_null]]).to(torch.int)
 		return ([[y, {}]], )
 
