@@ -1,18 +1,24 @@
 # Extra Models for ComfyUI
 
-This repository aims to add support for various random image diffusion models to ComfyUI.
+This repository aims to add support for various different image diffusion models to ComfyUI.
 
 ## Installation
 
-Simply clone this repo to your custom_nodes folder using the following command: `git clone https://github.com/city96/ComfyUI_ExtraModels custom_nodes/ComfyUI_ExtraModels`.
+Simply clone this repo to your custom_nodes folder using the following command:
 
-### Portable install
+`git clone https://github.com/city96/ComfyUI_ExtraModels custom_nodes/ComfyUI_ExtraModels`
+
+You will also have to install the requirements from the provided file by running `pip install -r requirements.txt` inside your VENV/conda env. If you downloaded the standalone version of ComfyUI, then follow the steps below.
+
+### Standalone ComfyUI
 
 I haven't tested this completely, so if you know what you're doing, use the regular venv/`git clone` install option when installing ComfyUI.
 
 Go to the where you unpacked `ComfyUI_windows_portable` to (where your run_nvidia_gpu.bat file is) and open a command line window. Press `CTRL+SHIFT+Right click` in an empty space and click "Open PowerShell window here".
 
-In case you haven't installed in through the manager, run `git clone https://github.com/city96/ComfyUI_ExtraModels .\ComfyUI\custom_nodes\ComfyUI_ExtraModels`
+Clone the repository to your custom nodes folder, assuming haven't installed in through the manager.
+
+`git clone https://github.com/city96/ComfyUI_ExtraModels .\ComfyUI\custom_nodes\ComfyUI_ExtraModels`
 
 To install the requirements on windows, run these commands in the same window:
 ```
@@ -30,29 +36,6 @@ git pull
 Alternatively, use the manager, assuming it has an update function.
 
 
-## DiT
-
-[Original Repo](https://github.com/facebookresearch/DiT)
-
-### Model info / implementation
-- Uses class labels instead of prompts
-- Limited to 256x256 or 512x512 images
-- Same latent space as SD1.5 (works with the SD1.5 VAE)
-- Works in FP16, but no other optimization (yet)
-
-### Usage
-
-1. Download the original model weights from the [DiT Repo](https://github.com/facebookresearch/DiT) or the converted [FP16 safetensor ones from Huggingface](https://huggingface.co/city96/DiT/tree/main).
-2. Place them in `ComfyUI\models\dit` (created on first run after installing the extension)
-3. Load the model and select the class labels as shown in the image below
-4. **Make sure to use the Empty label conditioning for the Negative input of the KSampler!**
-
-ConditioningCombine nodes *should* work for combining multiple labels. The area ones don't since the model currently can't handle dynamic input dimensions.
-
-[Image with sample workflow](https://github.com/city96/ComfyUI_ExtraModels/assets/125218114/33bfb812-23ea-4bb0-b1e2-082756e53010)
-
-![DIT_WORKFLOW_IMG](https://github.com/city96/ComfyUI_ExtraModels/assets/125218114/cdd4ec94-b0eb-436a-bf23-a3bcef8d7b90)
-
 
 ## PixArt
 
@@ -69,27 +52,54 @@ ConditioningCombine nodes *should* work for combining multiple labels. The area 
 1. Download the model weights from the [PixArt alpha repo](https://huggingface.co/PixArt-alpha/PixArt-alpha/tree/main) - you most likely want the 1024px one - `PixArt-XL-2-1024-MS.pth`
 2. Place them in your checkpoints folder
 3. Load them with the correct PixArt checkpoint loader
-4. Follow the T5 section of this readme to set up the T5 text encoder
+4. **Follow the T5v11 section of this readme** to set up the T5 text encoder
+
+> [!TIP]
+> You should be able to use the model with the default KSampler if you're on the latest version of the node.
+> In theory, this should allow you to use longer prompts as well as things like doing img2img.
 
 Limitations:
-- The default `KSampler` uses a different noise schedule/sampling algo (I think), so it most likely won't work as expected.
 - `PixArt DPM Sampler` requires the negative prompt to be shorter than the positive prompt.
 - `PixArt DPM Sampler` can only work with a batch size of 1.
 - `PixArt T5 Text Encode` is from the reference implementation, therefore it doesn't support weights. `T5 Text Encode` support weights, but I can't attest to the correctness of the implementation.
 
-PixArt uses the same T5v1.1-xxl text encoder as DeepFloyd, so the T5 section of the readme also applies.
-
 > [!IMPORTANT]  
-> Make sure to `pip install timm==0.6.13` (or alternatively, `pip install -r requirements.txt` in the folder where the extension is)
-> 
 > Installing `xformers` is optional but strongly recommended as torch SDP is only partially implemented, if that.
 
-[Sample workflow here](https://github.com/city96/ComfyUI_ExtraModels/files/13481704/PixArtV2.json)
+[Sample workflow here](https://github.com/city96/ComfyUI_ExtraModels/files/13617463/PixArtV3.json)
 
-![PixArtT10](https://github.com/city96/ComfyUI_ExtraModels/assets/125218114/e709da33-d313-43a0-bdbf-b6e84bde14e7)
+![PixArtT12](https://github.com/city96/ComfyUI_ExtraModels/assets/125218114/eb1a02f9-6114-47eb-a066-261c39c55615)
+
+
+
+## DiT
+
+[Original Repo](https://github.com/facebookresearch/DiT)
+
+### Model info / implementation
+- Uses class labels instead of prompts
+- Limited to 256x256 or 512x512 images
+- Same latent space as SD1.5 (works with the SD1.5 VAE)
+- Works in FP16, but no other optimization
+
+### Usage
+
+1. Download the original model weights from the [DiT Repo](https://github.com/facebookresearch/DiT) or the converted [FP16 safetensor ones from Huggingface](https://huggingface.co/city96/DiT/tree/main).
+2. Place them in `ComfyUI\models\dit` (created on first run after installing the extension)
+3. Load the model and select the class labels as shown in the image below
+4. **Make sure to use the Empty label conditioning for the Negative input of the KSampler!**
+
+ConditioningCombine nodes *should* work for combining multiple labels. The area ones don't since the model currently can't handle dynamic input dimensions.
+
+[Image with sample workflow](https://github.com/city96/ComfyUI_ExtraModels/assets/125218114/33bfb812-23ea-4bb0-b1e2-082756e53010)
+
+![DIT_WORKFLOW_IMG](https://github.com/city96/ComfyUI_ExtraModels/assets/125218114/cdd4ec94-b0eb-436a-bf23-a3bcef8d7b90)
+
+
 
 ## T5
-### Model
+
+### T5v11
 
 The model files can be downloaded from the [DeepFloyd/t5-v1_1-xxl](https://huggingface.co/DeepFloyd/t5-v1_1-xxl/tree/main) repository.
 
@@ -111,6 +121,7 @@ On windows, you may need a newer version of bitsandbytes for 4bit. Try `python -
 
 > [!IMPORTANT]  
 > You may also need to upgrade transformers and install spiece for the tokenizer. `pip install -r requirements.txt`
+
 
 
 ## VAE
