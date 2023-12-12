@@ -22,8 +22,8 @@ Clone the repository to your custom nodes folder, assuming haven't installed in 
 
 To install the requirements on windows, run these commands in the same window:
 ```
-.\python_embeded\python.exe -m pip install -r  .\ComfyUI\custom_nodes\ComfyUI_ExtraModels\requirements.txt
-.\python_embeded\python.exe -m pip install bitsandbytes --prefer-binary --extra-index-url=https://jllllll.github.io/bitsandbytes-windows-webui
+.\python_embeded\python.exe -s -m pip install -r .\ComfyUI\custom_nodes\ComfyUI_ExtraModels\requirements.txt
+.\python_embeded\python.exe -s -m pip install bitsandbytes --prefer-binary --extra-index-url=https://jllllll.github.io/bitsandbytes-windows-webui
 ```
 
 To update, open the command line window like before and run the following commands:
