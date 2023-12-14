@@ -38,6 +38,8 @@ def string_to_dtype(s="none", mode=None):
 		return None
 	elif s in ["fp32", "float32", "float"]:
 		return torch.float32
+	elif s in ["bf16", "bfloat16"]:
+		return torch.bfloat16
 	elif s in ["fp16", "float16", "half"]:
 		return torch.float16
 	elif "fp8" in s or "float8" in s:

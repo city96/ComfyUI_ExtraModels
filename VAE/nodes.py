@@ -12,7 +12,7 @@ class ExtraVAELoader:
 			"required": {
 				"vae_name": (folder_paths.get_filename_list("vae"),),
 				"vae_type": (list(vae_conf.keys()), {"default":"kl-f8"}),
-				"dtype"   : (dtype_list_short,),
+				"dtype"   : ([*dtype_list_short, "BF16"],),
 			}
 		}
 	RETURN_TYPES = ("VAE",)
