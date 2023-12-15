@@ -70,6 +70,18 @@ Limitations:
 
 ![PixArtT12](https://github.com/city96/ComfyUI_ExtraModels/assets/125218114/eb1a02f9-6114-47eb-a066-261c39c55615)
 
+### PixArt LCM
+
+The LCM model also works if you're on the latest version. To use it:
+
+1. Download the [PixArt LCM model](https://huggingface.co/PixArt-alpha/PixArt-LCM-XL-2-1024-MS/blob/main/transformer/diffusion_pytorch_model.safetensors) and place it in your checkpoints folder.
+2. Add a `ModelSamplingDiscrete` node and set "sampling" to "lcm"
+3. Adjust the KSampler settings - Set the sampler to "lcm". Your CFG should be fairly low (1.1-1.5), your steps should be around 5.
+
+Everything else can be the same the same as in the example above.
+
+![PixArtLCM](https://github.com/city96/ComfyUI_ExtraModels/assets/125218114/558f8b30-449b-4973-ad7e-6aa69832adcb)
+
 
 
 ## DiT
