@@ -3,7 +3,14 @@ import folder_paths
 from .conf import vae_conf
 from .loader import EXVAE
 
-from ..utils.dtype import string_to_dtype, dtype_list_short
+from ..utils.dtype import string_to_dtype
+
+dtypes = [
+	"auto",
+	"FP32",
+	"FP16",
+	"BF16"
+]
 
 class ExtraVAELoader:
 	@classmethod
@@ -12,7 +19,7 @@ class ExtraVAELoader:
 			"required": {
 				"vae_name": (folder_paths.get_filename_list("vae"),),
 				"vae_type": (list(vae_conf.keys()), {"default":"kl-f8"}),
-				"dtype"   : ([*dtype_list_short, "BF16"],),
+				"dtype"   : (dtypes,),
 			}
 		}
 	RETURN_TYPES = ("VAE",)

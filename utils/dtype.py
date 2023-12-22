@@ -1,26 +1,6 @@
 import torch
 from comfy import model_management
 
-dtype_list_torch = [
-	"FP32",
-	"FP16",
-	# "FP8 E4M3", # ToDo: add these
-	# "FP8 E5M2",
-]
-
-dtype_list = [
-	"default",
-	"auto (comfy)",
-	*dtype_list_torch,
-	"bnb8bit",
-	"bnb4bit"
-]
-
-dtype_list_short = [
-	"auto",
-	*dtype_list_torch,
-]
-
 def string_to_dtype(s="none", mode=None):
 	s = s.lower().strip()
 	if s in ["default", "as-is"]:

@@ -4,7 +4,7 @@ import torch
 import folder_paths
 
 from .loader import load_t5
-from ..utils.dtype import string_to_dtype, dtype_list
+from ..utils.dtype import string_to_dtype
 
 # initialize custom folder path
 # TODO: integrate with `extra_model_paths.yaml`
@@ -17,6 +17,19 @@ folder_paths.folder_names_and_paths["t5"] = (
 	folder_paths.supported_pt_extensions
 )
 
+dtypes = [
+	"default",
+	"auto (comfy)",
+	"FP32",
+	"FP16",
+	# Note: remove these at some point
+	"bnb8bit",
+	"bnb4bit",
+]
+try: torch.float8_e5m2
+except AttributeError: print("Torch version too old for FP8")
+else: dtypes += ["FP8 E4M3", "FP8 E5M2"]
+
 class T5v11Loader:
 	@classmethod
 	def INPUT_TYPES(s):
@@ -26,7 +39,7 @@ class T5v11Loader:
 				"t5v11_ver": (["xxl"],),
 				"path_type": (["folder", "file"],),
 				"device": (["auto", "cpu", "gpu"],{"default":"cpu"}),
-				"dtype": (dtype_list,),
+				"dtype": (dtypes,),
 			}
 		}
 	RETURN_TYPES = ("T5",)
