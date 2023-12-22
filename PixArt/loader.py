@@ -5,7 +5,7 @@ import comfy.model_base
 import comfy.utils
 import torch
 from comfy import model_management
-from .diffusers_convert import convert_pixart_state_dict
+from .diffusers_convert import convert_state_dict
 
 class EXM_PixArt(comfy.supported_models_base.BASE):
 	unet_config = {}
@@ -26,8 +26,16 @@ class EXM_PixArt(comfy.supported_models_base.BASE):
 def load_pixart(model_path, model_conf):
 	state_dict = comfy.utils.load_torch_file(model_path)
 	state_dict = state_dict.get("model", state_dict)
-	if "caption_projection.y_embedding" in state_dict:
-		state_dict = convert_pixart_state_dict(state_dict) # Diffusers
+
+	# prefix
+	for prefix in ["model.diffusion_model.",]:
+		if any(True for x in state_dict if x.startswith(prefix)):
+			state_dict = {k[len(prefix):]:v for k,v in state_dict.items()}
+
+	# diffusers
+	if "adaln_single.linear.weight" in state_dict:
+		state_dict = convert_state_dict(state_dict) # Diffusers
+
 	parameters = comfy.utils.calculate_parameters(state_dict)
 	unet_dtype = model_management.unet_dtype(model_params=parameters)
 

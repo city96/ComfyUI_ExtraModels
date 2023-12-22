@@ -3,7 +3,9 @@ import json
 import torch
 import folder_paths
 
+from comfy import utils
 from .conf import pixart_conf, pixart_res
+from .lora import load_pixart_lora
 from .loader import load_pixart
 from .sampler import sample_pixart
 
@@ -50,6 +52,45 @@ class PixArtResolutionSelect():
 	def get_res(self, model, ratio):
 		width, height = pixart_res[model][ratio]
 		return (width,height)
+
+class PixArtLoraLoader:
+	def __init__(self):
+		self.loaded_lora = None
+
+	@classmethod
+	def INPUT_TYPES(s):
+		return {
+			"required": {
+				"model": ("MODEL",),
+				"lora_name": (folder_paths.get_filename_list("loras"), ),
+				"strength": ("FLOAT", {"default": 1.0, "min": -20.0, "max": 20.0, "step": 0.01}),
+			}
+		}
+	RETURN_TYPES = ("MODEL",)
+	FUNCTION = "load_lora"
+	CATEGORY = "ExtraModels/PixArt"
+	TITLE = "PixArt Load LoRA"
+
+	def load_lora(self, model, lora_name, strength,):
+		if strength == 0:
+			return (model)
+
+		lora_path = folder_paths.get_full_path("loras", lora_name)
+		lora = None
+		if self.loaded_lora is not None:
+			if self.loaded_lora[0] == lora_path:
+				lora = self.loaded_lora[1]
+			else:
+				temp = self.loaded_lora
+				self.loaded_lora = None
+				del temp
+
+		if lora is None:
+			lora = utils.load_torch_file(lora_path, safe_load=True)
+			self.loaded_lora = (lora_path, lora)
+
+		model_lora = load_pixart_lora(model, lora, lora_path, strength,)
+		return (model_lora,)
 
 class PixArtDPMSampler:
 	"""
@@ -145,6 +186,7 @@ class PixArtT5TextEncode:
 NODE_CLASS_MAPPINGS = {
 	"PixArtCheckpointLoader" : PixArtCheckpointLoader,
 	"PixArtResolutionSelect" : PixArtResolutionSelect,
+	"PixArtLoraLoader" : PixArtLoraLoader,
 	"PixArtDPMSampler" : PixArtDPMSampler,
 	"PixArtT5TextEncode" : PixArtT5TextEncode,
 }

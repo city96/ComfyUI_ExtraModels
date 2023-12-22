@@ -58,38 +58,88 @@ for depth in range(28):
 		(f"blocks.{depth}.cross_attn.proj.bias"   ,f"transformer_blocks.{depth}.attn2.to_out.0.bias"),
 	]
 
-def convert_pixart_state_dict(unet_state_dict):
-	if "adaln_single.emb.resolution_embedder.linear_1.weight" in unet_state_dict.keys():
+def find_prefix(state_dict, target_key):
+	prefix = ""
+	for k in state_dict.keys():
+		if k.endswith(target_key):
+			prefix = k.split(target_key)[0]
+			break
+	return prefix
+
+def convert_state_dict(state_dict):
+	if "adaln_single.emb.resolution_embedder.linear_1.weight" in state_dict.keys():
 		cmap = conversion_map + conversion_map_ms
 	else:
 		cmap = conversion_map
 
-	new_state_dict = {k: unet_state_dict.pop(v) for k,v in cmap}
+	new_state_dict = {k: state_dict[v] for k,v in cmap}
+	matched = list(v for k,v in cmap if v in state_dict.keys())
 	
 	for depth in range(28):
-		# Self Attention
-		q = unet_state_dict.pop(f"transformer_blocks.{depth}.attn1.to_q.weight")
-		k = unet_state_dict.pop(f"transformer_blocks.{depth}.attn1.to_k.weight")
-		v = unet_state_dict.pop(f"transformer_blocks.{depth}.attn1.to_v.weight")
-		new_state_dict[f"blocks.{depth}.attn.qkv.weight"] = torch.cat((q,k,v), dim=0)
-		qb = unet_state_dict.pop(f"transformer_blocks.{depth}.attn1.to_q.bias")
-		kb = unet_state_dict.pop(f"transformer_blocks.{depth}.attn1.to_k.bias")
-		vb = unet_state_dict.pop(f"transformer_blocks.{depth}.attn1.to_v.bias")
-		new_state_dict[f"blocks.{depth}.attn.qkv.bias"] = torch.cat((qb,kb,vb), dim=0)
+		for wb in ["weight", "bias"]:
+			# Self Attention
+			key = lambda a: f"transformer_blocks.{depth}.attn1.to_{a}.{wb}"
+			new_state_dict[f"blocks.{depth}.attn.qkv.{wb}"] = torch.cat((
+				state_dict[key('q')], state_dict[key('k')], state_dict[key('v')]
+			), dim=0)
+			matched += [key('q'), key('k'), key('v')]
 
-		# Cross-attention (linear)
-		q = unet_state_dict.pop(f"transformer_blocks.{depth}.attn2.to_q.weight")
-		k = unet_state_dict.pop(f"transformer_blocks.{depth}.attn2.to_k.weight")
-		v = unet_state_dict.pop(f"transformer_blocks.{depth}.attn2.to_v.weight")
-		new_state_dict[f"blocks.{depth}.cross_attn.q_linear.weight"] = q
-		new_state_dict[f"blocks.{depth}.cross_attn.kv_linear.weight"] = torch.cat((k,v), dim=0)
-		qb = unet_state_dict.pop(f"transformer_blocks.{depth}.attn2.to_q.bias")
-		kb = unet_state_dict.pop(f"transformer_blocks.{depth}.attn2.to_k.bias")
-		vb = unet_state_dict.pop(f"transformer_blocks.{depth}.attn2.to_v.bias")
-		new_state_dict[f"blocks.{depth}.cross_attn.q_linear.bias"] = qb
-		new_state_dict[f"blocks.{depth}.cross_attn.kv_linear.bias"] = torch.cat((kb,vb), dim=0)
+			# Cross-attention (linear)
+			key = lambda a: f"transformer_blocks.{depth}.attn2.to_{a}.{wb}"
+			new_state_dict[f"blocks.{depth}.cross_attn.q_linear.{wb}"] = state_dict[key('q')]
+			new_state_dict[f"blocks.{depth}.cross_attn.kv_linear.{wb}"] = torch.cat((
+				state_dict[key('k')], state_dict[key('v')]
+			), dim=0)
+			matched += [key('q'), key('k'), key('v')]
 
-	if len(unet_state_dict.keys()) > 0:
-		print(f"PixArt: UNET conversion has leftover keys!:\n{unet_state_dict.keys()}")
+	if len(matched) < len(state_dict):
+		print(f"PixArt: UNET conversion has leftover keys! ({len(matched)} vs {len(state_dict)})")
+		print(list( set(state_dict.keys()) - set(matched) ))
+
+	return new_state_dict
+
+# Same as above but for LoRA weights:
+def convert_lora_state_dict(state_dict):
+	# peft
+	rep_ap = lambda x: x.replace(".weight", ".lora_A.weight")
+	rep_bp = lambda x: x.replace(".weight", ".lora_B.weight")
+	# koyha
+	rep_ak = lambda x: x.replace(".weight", ".lora_down.weight")
+	rep_bk = lambda x: x.replace(".weight", ".lora_up.weight")
 	
+	prefix = find_prefix(state_dict, "adaln_single.linear.lora_A.weight")
+	state_dict = {k[len(prefix):]:v for k,v in state_dict.items()}
+
+	cmap = []
+	cmap_unet = conversion_map + conversion_map_ms # todo: 512 model
+	for k, v in cmap_unet:
+		if not v.endswith(".weight"):
+			continue
+		cmap.append((rep_ak(k), rep_ap(v)))
+		cmap.append((rep_bk(k), rep_bp(v)))
+
+	new_state_dict = {k: state_dict[v] for k,v in cmap}
+	matched = list(v for k,v in cmap if v in state_dict.keys())
+
+	for fp, fk in ((rep_ap, rep_ak),(rep_bp, rep_bk)):
+		for depth in range(28):
+			# Self Attention
+			key = lambda a: fp(f"transformer_blocks.{depth}.attn1.to_{a}.weight")
+			new_state_dict[fk(f"blocks.{depth}.attn.qkv.weight")] = torch.cat((
+				state_dict[key('q')], state_dict[key('k')], state_dict[key('v')]
+			), dim=0)
+			matched += [key('q'), key('k'), key('v')]
+
+			# Cross-attention (linear)
+			key = lambda a: fp(f"transformer_blocks.{depth}.attn2.to_{a}.weight")
+			new_state_dict[fk(f"blocks.{depth}.cross_attn.q_linear.weight")]  = state_dict[key('q')]
+			new_state_dict[fk(f"blocks.{depth}.cross_attn.kv_linear.weight")] = torch.cat((
+				state_dict[key('k')], state_dict[key('v')]
+			), dim=0)
+			matched += [key('q'), key('k'), key('v')]
+
+	if len(matched) < len(state_dict):
+		print(f"PixArt: LoRA conversion has leftover keys! ({len(matched)} vs {len(state_dict)})")
+		print(list( set(state_dict.keys()) - set(matched) ))
+
 	return new_state_dict
