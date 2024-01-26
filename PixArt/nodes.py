@@ -33,11 +33,11 @@ class PixArtCheckpointLoader:
 	CATEGORY = "ExtraModels/PixArt"
 	TITLE = "PixArt Checkpoint Loader"
 
-	def load_checkpoint(self, ckpt_name, model, dtype: str):
+	def load_checkpoint(self, ckpt_name, model, dtype):
 		ckpt_path = folder_paths.get_full_path("checkpoints", ckpt_name)
 		model_conf = pixart_conf[model]
 
-		target_dtype: torch.dtype | None = None
+		target_dtype = None
 		if dtype == "default":
 			target_dtype = torch.float16
 		elif dtype == 'auto (comfy)':

@@ -23,7 +23,7 @@ class EXM_PixArt(comfy.supported_models_base.BASE):
 	def model_type(self, state_dict, prefix=""):
 		return comfy.model_base.ModelType.EPS
 
-def load_pixart(model_path, model_conf, target_dtype: torch.dtype | None=None):
+def load_pixart(model_path, model_conf, target_dtype):
 	state_dict = comfy.utils.load_torch_file(model_path)
 	state_dict = state_dict.get("model", state_dict)
 
