@@ -23,9 +23,10 @@ class EXM_PixArt(comfy.supported_models_base.BASE):
 	def model_type(self, state_dict, prefix=""):
 		return comfy.model_base.ModelType.EPS
 
-def load_pixart(model_path, model_conf):
+def load_pixart(model_path, model_conf, target_dtype: torch.dtype | None=None):
 	state_dict = comfy.utils.load_torch_file(model_path)
 	state_dict = state_dict.get("model", state_dict)
+
 
 	# prefix
 	for prefix in ["model.diffusion_model.",]:
@@ -36,8 +37,11 @@ def load_pixart(model_path, model_conf):
 	if "adaln_single.linear.weight" in state_dict:
 		state_dict = convert_state_dict(state_dict) # Diffusers
 
-	parameters = comfy.utils.calculate_parameters(state_dict)
-	unet_dtype = model_management.unet_dtype(model_params=parameters)
+	if target_dtype is None:
+		parameters = comfy.utils.calculate_parameters(state_dict)
+		unet_dtype = model_management.unet_dtype(model_params=parameters)
+	else:
+		unet_dtype = target_dtype
 
 	model_conf = EXM_PixArt(model_conf) # convert to object
 	model = comfy.model_base.BaseModel(

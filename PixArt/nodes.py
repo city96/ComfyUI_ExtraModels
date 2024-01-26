@@ -9,6 +9,14 @@ from .lora import load_pixart_lora
 from .loader import load_pixart
 from .sampler import sample_pixart
 
+dtypes = [
+	"default",
+	"auto (comfy)",
+	"float32",
+	"float16",
+	"bfloat16",
+]
+
 class PixArtCheckpointLoader:
 	@classmethod
 	def INPUT_TYPES(s):
@@ -16,6 +24,7 @@ class PixArtCheckpointLoader:
 			"required": {
 				"ckpt_name": (folder_paths.get_filename_list("checkpoints"),),
 				"model": (list(pixart_conf.keys()),),
+				"dtype": (dtypes,),
 			}
 		}
 	RETURN_TYPES = ("MODEL",)
@@ -24,12 +33,28 @@ class PixArtCheckpointLoader:
 	CATEGORY = "ExtraModels/PixArt"
 	TITLE = "PixArt Checkpoint Loader"
 
-	def load_checkpoint(self, ckpt_name, model):
+	def load_checkpoint(self, ckpt_name, model, dtype: str):
 		ckpt_path = folder_paths.get_full_path("checkpoints", ckpt_name)
 		model_conf = pixart_conf[model]
+
+		target_dtype: torch.dtype | None = None
+		if dtype == "default":
+			target_dtype = torch.float16
+		elif dtype == 'auto (comfy)':
+			target_dtype = None
+		elif dtype == 'float32':
+			target_dtype = torch.float32
+		elif dtype == 'float16':
+			target_dtype = torch.float16
+		elif dtype == 'bfloat16':
+			target_dtype = torch.bfloat16
+		else:
+			raise ValueError(f"Invalid dtype: {dtype}")
+
 		model = load_pixart(
 			model_path = ckpt_path,
 			model_conf = model_conf,
+			target_dtype = target_dtype,
 		)
 		return (model,)
 
