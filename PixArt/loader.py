@@ -27,7 +27,6 @@ def load_pixart(model_path, model_conf, target_dtype):
 	state_dict = comfy.utils.load_torch_file(model_path)
 	state_dict = state_dict.get("model", state_dict)
 
-
 	# prefix
 	for prefix in ["model.diffusion_model.",]:
 		if any(True for x in state_dict if x.startswith(prefix)):
