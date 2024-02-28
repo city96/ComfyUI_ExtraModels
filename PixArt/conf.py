@@ -38,6 +38,19 @@ pixart_conf = {
 	},
 }
 
+pixart_conf.update({ # controlnet models
+	"ControlPixArtHalf": {
+		"target": "ControlPixArtHalf",
+		"unet_config": pixart_conf["PixArt_XL_2"]["unet_config"],
+		"sampling_settings": pixart_conf["PixArt_XL_2"]["sampling_settings"],
+	},
+	"ControlPixArtMSHalf": {
+		"target": "ControlPixArtMSHalf",
+		"unet_config": pixart_conf["PixArtMS_XL_2"]["unet_config"],
+		"sampling_settings": pixart_conf["PixArtMS_XL_2"]["sampling_settings"],
+	}
+})
+
 pixart_res = {
 	"PixArtMS_XL_2": { # models/PixArtMS 1024x1024
 		'0.25': [512, 2048], '0.26': [512, 1984], '0.27': [512, 1920], '0.28': [512, 1856],

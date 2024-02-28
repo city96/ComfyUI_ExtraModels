@@ -38,7 +38,7 @@ class PixArtResolutionSelect():
 	def INPUT_TYPES(s):
 		return {
 			"required": {
-				"model": (list(pixart_conf.keys()),),
+				"model": (list(pixart_res.keys()),),
 				# keys are the same for both
 				"ratio": (list(pixart_res["PixArtMS_XL_2"].keys()),{"default":"1.00"}),
 			}
@@ -91,6 +91,55 @@ class PixArtLoraLoader:
 
 		model_lora = load_pixart_lora(model, lora, lora_path, strength,)
 		return (model_lora,)
+
+class PixArtResolutionCond:
+	@classmethod
+	def INPUT_TYPES(s):
+		return {
+			"required": {
+				"cond": ("CONDITIONING", ),
+				"width": ("INT", {"default": 1024.0, "min": 0, "max": 8192}),
+				"height": ("INT", {"default": 1024.0, "min": 0, "max": 8192}),
+			}
+		}
+
+	RETURN_TYPES = ("CONDITIONING",)
+	RETURN_NAMES = ("cond",)
+	FUNCTION = "add_cond"
+	CATEGORY = "ExtraModels/PixArt"
+	TITLE = "PixArt Resolution Conditioning"
+	
+	def add_cond(self, cond, width, height):
+		for c in range(len(cond)):
+			cond[c][1].update({
+				"img_hw": [[height, width]],
+				"aspect_ratio": [[height/width]],
+			})
+		return (cond,)
+
+class PixArtControlNetCond:
+	@classmethod
+	def INPUT_TYPES(s):
+		return {
+			"required": {
+				"cond": ("CONDITIONING",),
+				"latent": ("LATENT",),
+				# "image": ("IMAGE",),
+				# "vae": ("VAE",),
+				# "strength": ("FLOAT", {"default": 1.0, "min": 0.0, "max": 10.0, "step": 0.01})
+			}
+		}
+
+	RETURN_TYPES = ("CONDITIONING",)
+	RETURN_NAMES = ("cond",)
+	FUNCTION = "add_cond"
+	CATEGORY = "ExtraModels/PixArt"
+	TITLE = "PixArt ControlNet Conditioning"
+
+	def add_cond(self, cond, latent):
+		for c in range(len(cond)):
+			cond[c][1]["cn_hint"] = latent["samples"] * 0.18215
+		return (cond,)
 
 class PixArtDPMSampler:
 	"""
@@ -189,4 +238,6 @@ NODE_CLASS_MAPPINGS = {
 	"PixArtLoraLoader" : PixArtLoraLoader,
 	"PixArtDPMSampler" : PixArtDPMSampler,
 	"PixArtT5TextEncode" : PixArtT5TextEncode,
+	"PixArtResolutionCond" : PixArtResolutionCond,
+	"PixArtControlNetCond" : PixArtControlNetCond,
 }

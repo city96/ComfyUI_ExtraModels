@@ -182,30 +182,34 @@ class PixArtMS(PixArt):
         x = self.unpatchify(x)  # (N, out_channels, H, W)
         return x
 
-    def forward(self, x, timesteps, context, y=None, **kwargs):
+    def forward(self, x, timesteps, context, img_hw=None, aspect_ratio=None, **kwargs):
         """
         Forward pass that adapts comfy input to original forward function
         x: (N, C, H, W) tensor of spatial inputs (images or latent representations of images)
         timesteps: (N,) tensor of diffusion timesteps
         context: (N, 1, 120, C) conditioning
-        y: extra conditioning.
+        img_hw: height|width conditioning
+        aspect_ratio: aspect ratio conditioning
         """
-        ## aspect ratio based on the latent image shape.
-        # Ideally, these should only be used as a fallback with the real ones
-        # passed in `y` to allow different values to be used for cont/uncond.
+        ## size/ar from cond with fallback based on the latent image shape.
         bs = x.shape[0]
-        data_info = {
-            "img_hw" : torch.tensor(
+        data_info = {}
+        if img_hw is None:
+            data_info["img_hw"] = torch.tensor(
                 [[x.shape[2]*8, x.shape[3]*8]],
                 dtype=self.dtype,
                 device=x.device
-            ).repeat(bs, 1),
-            "aspect_ratio" : torch.tensor(
+            ).repeat(bs, 1)
+        else:
+            data_info["img_hw"] = img_hw.to(x.dtype).to(x.device)
+        if aspect_ratio is None or True:
+            data_info["aspect_ratio"] = torch.tensor(
                 [[x.shape[2]/x.shape[3]]],
                 dtype=self.dtype,
                 device=x.device
-            ).repeat(bs, 1),
-        }
+            ).repeat(bs, 1)
+        else:
+            data_info["aspect_ratio"] = aspect_ratio.to(x.dtype).to(x.device)
 
         ## Still accepts the input w/o that dim but returns garbage
         if len(context.shape) == 3:

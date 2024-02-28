@@ -3,6 +3,7 @@ import comfy.latent_formats
 import comfy.model_patcher
 import comfy.model_base
 import comfy.utils
+import comfy.conds
 import torch
 from comfy import model_management
 from .diffusers_convert import convert_state_dict
@@ -22,6 +23,27 @@ class EXM_PixArt(comfy.supported_models_base.BASE):
 
 	def model_type(self, state_dict, prefix=""):
 		return comfy.model_base.ModelType.EPS
+
+class EXM_PixArt_Model(comfy.model_base.BaseModel):
+	def __init__(self, *args, **kwargs):
+		super().__init__(*args, **kwargs)
+	
+	def extra_conds(self, **kwargs):
+		out = super().extra_conds(**kwargs)
+
+		img_hw = kwargs.get("img_hw", None)
+		if img_hw is not None:
+			out["img_hw"] = comfy.conds.CONDRegular(torch.tensor(img_hw))
+		
+		aspect_ratio = kwargs.get("aspect_ratio", None)
+		if aspect_ratio is not None:
+			out["aspect_ratio"] = comfy.conds.CONDRegular(torch.tensor(aspect_ratio))
+
+		cn_hint = kwargs.get("cn_hint", None)
+		if cn_hint is not None:
+			out["cn_hint"] = comfy.conds.CONDRegular(cn_hint)
+
+		return out
 
 def load_pixart(model_path, model_conf):
 	state_dict = comfy.utils.load_torch_file(model_path)
@@ -48,7 +70,7 @@ def load_pixart(model_path, model_conf):
 		unet_dtype = manual_cast_dtype
 
 	model_conf = EXM_PixArt(model_conf) # convert to object
-	model = comfy.model_base.BaseModel(
+	model = EXM_PixArt_Model( # same as comfy.model_base.BaseModel
 		model_conf,
 		model_type=comfy.model_base.ModelType.EPS,
 		device=model_management.get_torch_device()
@@ -60,6 +82,16 @@ def load_pixart(model_path, model_conf):
 	elif model_conf.model_target == "PixArt":
 		from .models.PixArt import PixArt
 		model.diffusion_model = PixArt(**model_conf.unet_config)
+	elif model_conf.model_target == "ControlPixArtMSHalf":
+		from .models.PixArtMS import PixArtMS
+		from .models.pixart_controlnet import ControlPixArtMSHalf
+		model.diffusion_model = PixArtMS(**model_conf.unet_config)
+		model.diffusion_model = ControlPixArtMSHalf(model.diffusion_model)
+	elif model_conf.model_target == "ControlPixArtHalf":
+		from .models.PixArt import PixArt
+		from .models.pixart_controlnet import ControlPixArtHalf
+		model.diffusion_model = PixArt(**model_conf.unet_config)
+		model.diffusion_model = ControlPixArtHalf(model.diffusion_model)
 	else:
 		raise NotImplementedError(f"Unknown model target '{model_conf.model_target}'")
 
