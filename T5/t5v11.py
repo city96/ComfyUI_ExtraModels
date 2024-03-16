@@ -6,7 +6,6 @@ https://github.com/comfyanonymous/ComfyUI/blob/master/comfy/sd1_clip.py
 import os
 
 from transformers import T5Tokenizer, T5EncoderModel, T5Config, modeling_utils
-import comfy.ops
 import torch
 import traceback
 import zipfile
@@ -45,9 +44,8 @@ class T5v11Model(torch.nn.Module):
                 )
             config = T5Config.from_json_file(textmodel_json_config)
             self.num_layers = config.num_hidden_layers
-            with comfy.ops.use_comfy_ops(device, dtype):
-                with modeling_utils.no_init_weights():
-                    self.transformer = T5EncoderModel(config)
+            with modeling_utils.no_init_weights():
+                self.transformer = T5EncoderModel(config)
 
         if freeze:
             self.freeze()
