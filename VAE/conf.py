@@ -126,5 +126,20 @@ vae_conf = {
 		"num_res_blocks"   : 2,
 		"attn_resolutions" : [],
 		"video_kernel_size": [3, 1, 1]
-	}
+	},
+	# Kandinsky-3
+	"MoVQ3": {
+		"type"             : "MoVQ3",
+		"embed_scale"      : 8,
+		"embed_dim"        : 4,
+		"double_z"         : False,
+		"z_channels"       : 4,
+		"resolution"       : 256,
+		"in_channels"      : 3,
+		"out_ch"           : 3,
+		"ch"               : 256,
+		"ch_mult"          : [1, 2, 2, 4],
+		"num_res_blocks"   : 2,
+		"attn_resolutions" : [32],
+    }
 }

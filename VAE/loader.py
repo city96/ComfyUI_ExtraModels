@@ -29,6 +29,9 @@ class EXVAE(comfy.sd.VAE):
 			from .models.consistencydecoder import ConsistencyDecoder
 			model = ConsistencyDecoder()
 			sd = {f"model.{k}":v for k,v in sd.items()}
+		elif model_conf["type"] == "MoVQ3":
+			from .models.movq3 import MoVQ
+			model = MoVQ(model_conf)
 		else:
 			raise NotImplementedError(f"Unknown VAE type '{model_conf['type']}'")
 
