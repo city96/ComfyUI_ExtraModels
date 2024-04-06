@@ -2,7 +2,7 @@ import torch
 from .sampling import gaussian_diffusion as gd
 from .sampling.dpm_solver import model_wrapper, DPM_Solver, NoiseScheduleVP
 
-from comfy.sample import prepare_sampling, prepare_noise, cleanup_additional_models, get_models_from_cond
+from comfy.sample import prepare_sampling, prepare_noise
 import comfy.utils
 import latent_preview
 
@@ -69,6 +69,4 @@ def sample_pixart(model, seed, steps, cfg, noise_schedule, noise_schedule_vp, po
 		previewer=previewer,
 	)
 
-	cleanup_additional_models(models)
-	cleanup_additional_models(set(get_models_from_cond(positive, "control")))
 	return samples.detach().cpu().float() * (1 / model.model.latent_format.scale_factor)
