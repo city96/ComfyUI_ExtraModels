@@ -11,24 +11,28 @@
 import math
 import torch
 import torch.nn as nn
+import torch.nn.functional as F
 from timm.models.vision_transformer import Mlp, Attention as Attention_
-from einops import rearrange, repeat
+from einops import rearrange
 
-from .utils import add_decomposed_rel_pos
 from comfy import model_management
-
 if model_management.xformers_enabled():
     import xformers
     import xformers.ops
+else:
+    print("""
+########################################
+ PixArt: Not using xformers!
+  Expect images to be non-deterministic!
+  Batch sizes > 1 are most likely broken
+########################################
+""")
 
 def modulate(x, shift, scale):
     return x * (1 + scale.unsqueeze(1)) + shift.unsqueeze(1)
 
-
 def t2i_modulate(x, shift, scale):
     return x * (1 + scale) + shift
-
-competent_attention_implementation = False
 
 class MultiHeadCrossAttention(nn.Module):
     def __init__(self, d_model, num_heads, attn_drop=0., proj_drop=0., **block_kwargs):
@@ -49,32 +53,24 @@ class MultiHeadCrossAttention(nn.Module):
         # query/value: img tokens; key: condition; mask: if padding tokens
         B, N, C = x.shape
 
+        q = self.q_linear(x).view(1, -1, self.num_heads, self.head_dim)
+        kv = self.kv_linear(cond).view(1, -1, 2, self.num_heads, self.head_dim)
+        k, v = kv.unbind(2)
+
         if model_management.xformers_enabled():
-            q = self.q_linear(x).view(1, -1, self.num_heads, self.head_dim)
-            kv = self.kv_linear(cond).view(1, -1, 2, self.num_heads, self.head_dim)
-            k, v = kv.unbind(2)
             attn_bias = None
             if mask is not None:
                 attn_bias = xformers.ops.fmha.BlockDiagonalMask.from_seqlens([N] * B, mask)
-            x = xformers.ops.memory_efficient_attention(q, k, v, p=self.attn_drop.p, attn_bias=attn_bias)
-            x = x.view(B, -1, C)
-            x = self.proj(x)
-            x = self.proj_drop(x)
-            return x
+            x = xformers.ops.memory_efficient_attention(
+                q, k, v,
+                p=self.attn_drop.p,
+                attn_bias=attn_bias
+            )
         else:
-            global competent_attention_implementation
-            if not competent_attention_implementation:
-                print("""\nYou should REALLY consider installing/enabling xformers.\nAlternatively, open up ExtraModels/PixArt/models/PixArt_blocks.py and\n- Fix the attention map on line 77 if you know how to\n- Add scaled_dot_product_attention on line 150\n- Send a PR and remove this message on line 32/66-69\n""")
-                competent_attention_implementation = True
-
-            q = self.q_linear(x).view(1, -1, self.num_heads, self.head_dim)
-            kv = self.kv_linear(cond).view(1, -1, 2, self.num_heads, self.head_dim)
-            k, v = kv.unbind(2)
             q, k, v = map(lambda t: t.permute(0, 2, 1, 3),(q, k, v),)
-            
             attn_mask = None
             if mask is not None and len(mask) > 1:
-                # This is probably wrong
+                # This is most definitely wrong, especially for B>1
                 attn_mask = torch.zeros(
                     [1, q.shape[1], q.shape[2], v.shape[2]],
                     dtype=q.dtype,
@@ -82,26 +78,28 @@ class MultiHeadCrossAttention(nn.Module):
                 )
                 attn_mask[:, :, (q.shape[2]//2):, mask[0]:] = True
                 attn_mask[:, :, :(q.shape[2]//2), :mask[1]] = True
+            x = torch.nn.functional.scaled_dot_product_attention(
+                q, k, v,
+                attn_mask=attn_mask,
+                dropout_p=self.attn_drop.p
+            ).permute(0, 2, 1, 3).contiguous()
+        x = x.view(B, -1, C)
+        x = self.proj(x)
+        x = self.proj_drop(x)
+        return x
 
-            x = torch.nn.functional.scaled_dot_product_attention(q, k, v, attn_mask=attn_mask, dropout_p=self.attn_drop.p)
-            x = x.permute(0, 2, 1, 3).contiguous()
-            x = x.view(B, -1, C)
-            x = self.proj(x)
-            x = self.proj_drop(x)
-            return x
 
-
-class WindowAttention(Attention_):
-    """Multi-head Attention block with relative position embeddings."""
+class AttentionKVCompress(Attention_):
+    """Multi-head Attention block with KV token compression and qk norm."""
 
     def __init__(
         self,
         dim,
         num_heads=8,
         qkv_bias=True,
-        use_rel_pos=False,
-        rel_pos_zero_init=True,
-        input_size=None,
+        sampling='conv',
+        sr_ratio=1,
+        qk_norm=False,
         **block_kwargs,
     ):
         """
@@ -109,56 +107,94 @@ class WindowAttention(Attention_):
             dim (int): Number of input channels.
             num_heads (int): Number of attention heads.
             qkv_bias (bool:  If True, add a learnable bias to query, key, value.
-            rel_pos (bool): If True, add relative positional embeddings to the attention map.
-            rel_pos_zero_init (bool): If True, zero initialize relative positional parameters.
-            input_size (int or None): Input resolution for calculating the relative positional
-                parameter size.
         """
         super().__init__(dim, num_heads=num_heads, qkv_bias=qkv_bias, **block_kwargs)
 
-        self.use_rel_pos = use_rel_pos
-        if self.use_rel_pos:
-            # initialize relative positional embeddings
-            self.rel_pos_h = nn.Parameter(torch.zeros(2 * input_size[0] - 1, self.head_dim))
-            self.rel_pos_w = nn.Parameter(torch.zeros(2 * input_size[1] - 1, self.head_dim))
-
-            if not rel_pos_zero_init:
-                nn.init.trunc_normal_(self.rel_pos_h, std=0.02)
-                nn.init.trunc_normal_(self.rel_pos_w, std=0.02)
-
-    def forward(self, x, mask=None):
-        B, N, C = x.shape # 2 4096 1152
-        qkv = self.qkv(x).reshape(B, N, 3, self.num_heads, C // self.num_heads)
-
-        if model_management.xformers_enabled():
-            q, k, v = qkv.unbind(2)
-
-            if getattr(self, 'fp32_attention', False):
-                q, k, v = q.float(), k.float(), v.float()
-
-            attn_bias = None
-            if mask is not None:
-                attn_bias = torch.zeros([B * self.num_heads, q.shape[1], k.shape[1]], dtype=q.dtype, device=q.device)
-                attn_bias.masked_fill_(mask.squeeze(1).repeat(self.num_heads, 1, 1) == 0, float('-inf'))
-            # Switch between torch / xformers attention
-            x = xformers.ops.memory_efficient_attention(q, k, v, p=self.attn_drop.p, attn_bias=attn_bias)
-            x = x.view(B, N, C)
-            x = self.proj(x)
-            x = self.proj_drop(x)
-            return x
+        self.sampling=sampling    # ['conv', 'ave', 'uniform', 'uniform_every']
+        self.sr_ratio = sr_ratio
+        if sr_ratio > 1 and sampling == 'conv':
+            # Avg Conv Init.
+            self.sr = nn.Conv2d(dim, dim, groups=dim, kernel_size=sr_ratio, stride=sr_ratio)
+            self.sr.weight.data.fill_(1/sr_ratio**2)
+            self.sr.bias.data.zero_()
+            self.norm = nn.LayerNorm(dim)
+        if qk_norm:
+            self.q_norm = nn.LayerNorm(dim)
+            self.k_norm = nn.LayerNorm(dim)
         else:
-            q, k, v = qkv.permute(2, 0, 3, 1, 4).unbind(0)
+            self.q_norm = nn.Identity()
+            self.k_norm = nn.Identity()
 
-            q = q * self.scale
-            attn = q @ k.transpose(-2, -1)
-            attn = attn.softmax(dim=-1)
-            attn = self.attn_drop(attn)
-            x = attn @ v
+    def downsample_2d(self, tensor, H, W, scale_factor, sampling=None):
+        if sampling is None or scale_factor == 1:
+            return tensor
+        B, N, C = tensor.shape
 
-            x = x.transpose(1, 2).reshape(B, N, C)
-            x = self.proj(x)
-            x = self.proj_drop(x)
-            return x
+        if sampling == 'uniform_every':
+            return tensor[:, ::scale_factor], int(N // scale_factor)
+
+        tensor = tensor.reshape(B, H, W, C).permute(0, 3, 1, 2)
+        new_H, new_W = int(H / scale_factor), int(W / scale_factor)
+        new_N = new_H * new_W
+
+        if sampling == 'ave':
+            tensor = F.interpolate(
+                tensor, scale_factor=1 / scale_factor, mode='nearest'
+            ).permute(0, 2, 3, 1)
+        elif sampling == 'uniform':
+            tensor = tensor[:, :, ::scale_factor, ::scale_factor].permute(0, 2, 3, 1)
+        elif sampling == 'conv':
+            tensor = self.sr(tensor).reshape(B, C, -1).permute(0, 2, 1)
+            tensor = self.norm(tensor)
+        else:
+            raise ValueError
+
+        return tensor.reshape(B, new_N, C).contiguous(), new_N
+
+    def forward(self, x, mask=None, HW=None, block_id=None):
+        B, N, C = x.shape # 2 4096 1152
+        new_N = N
+        if HW is None:
+            H = W = int(N ** 0.5)
+        else:
+            H, W = HW
+        qkv = self.qkv(x).reshape(B, N, 3, C)
+
+        q, k, v = qkv.unbind(2)
+        dtype = q.dtype
+        q = self.q_norm(q)
+        k = self.k_norm(k)
+
+        # KV compression
+        if self.sr_ratio > 1:
+            k, new_N = self.downsample_2d(k, H, W, self.sr_ratio, sampling=self.sampling)
+            v, new_N = self.downsample_2d(v, H, W, self.sr_ratio, sampling=self.sampling)
+
+        q = q.reshape(B, N, self.num_heads, C // self.num_heads).to(dtype)
+        k = k.reshape(B, new_N, self.num_heads, C // self.num_heads).to(dtype)
+        v = v.reshape(B, new_N, self.num_heads, C // self.num_heads).to(dtype)
+
+        attn_bias = None
+        if mask is not None:
+            attn_bias = torch.zeros([B * self.num_heads, q.shape[1], k.shape[1]], dtype=q.dtype, device=q.device)
+            attn_bias.masked_fill_(mask.squeeze(1).repeat(self.num_heads, 1, 1) == 0, float('-inf'))
+        # Switch between torch / xformers attention
+        if model_management.xformers_enabled():
+            x = xformers.ops.memory_efficient_attention(
+                q, k, v,
+                p=self.attn_drop.p,
+                attn_bias=attn_bias
+            )
+        else:
+            q, k, v = map(lambda t: t.transpose(1, 2),(q, k, v),)
+            x = torch.nn.functional.scaled_dot_product_attention(
+                q, k, v,
+                attn_mask=attn_bias
+            ).transpose(1, 2).contiguous()
+        x = x.view(B, N, C)
+        x = self.proj(x)
+        x = self.proj_drop(x)
+        return x
 
 
 #################################################################################

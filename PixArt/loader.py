@@ -82,6 +82,10 @@ def load_pixart(model_path, model_conf):
 	elif model_conf.model_target == "PixArt":
 		from .models.PixArt import PixArt
 		model.diffusion_model = PixArt(**model_conf.unet_config)
+	elif model_conf.model_target == "PixArtMSSigma":
+		from .models.PixArtMS import PixArtMS
+		model.diffusion_model = PixArtMS(**model_conf.unet_config)
+		model.latent_format = comfy.latent_formats.SDXL()
 	elif model_conf.model_target == "ControlPixArtMSHalf":
 		from .models.PixArtMS import PixArtMS
 		from .models.pixart_controlnet import ControlPixArtMSHalf

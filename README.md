@@ -70,6 +70,15 @@ Limitations:
 
 ![PixArtT12](https://github.com/city96/ComfyUI_ExtraModels/assets/125218114/eb1a02f9-6114-47eb-a066-261c39c55615)
 
+### PixArt Sigma
+
+Currently only the early 256 and 512 checkpoints are released, out of which only the 512 is supported in this custom node pack.
+
+You can find the [512 checkpoint here](https://huggingface.co/PixArt-alpha/PixArt-Sigma/blob/main/PixArt-Sigma-XL-2-512-MS.pth). Place it in your models folder and select the appropriate type in the model loader / resolution selection node.
+
+> [!IMPORTANT]
+> Make sure to select an SDXL VAE for PixArt Sigma!
+
 ### PixArt LCM
 
 The LCM model also works if you're on the latest version. To use it:

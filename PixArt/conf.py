@@ -1,40 +1,54 @@
 """
 List of all PixArt model types / settings
 """
+
+sampling_settings = {
+	"beta_schedule" : "sqrt_linear",
+	"linear_start"  : 0.0001,
+	"linear_end"    : 0.02,
+	"timesteps"     : 1000,
+}
+
 pixart_conf = {
 	"PixArtMS_XL_2": { # models/PixArtMS
 		"target": "PixArtMS",
 		"unet_config": {
 			"input_size"  : 1024//8,
-			"lewei_scale" :    2,
 			"depth"       :   28,
 			"num_heads"   :   16,
 			"patch_size"  :    2,
 			"hidden_size" : 1152,
+			"pe_interpolation": 2,
 		},
-		"sampling_settings": {
-			"beta_schedule" : "sqrt_linear",
-			"linear_start"  : 0.0001,
-			"linear_end"    : 0.02,
-			"timesteps"     : 1000,
+		"sampling_settings" : sampling_settings,
+	},
+	"PixArtMS_Sigma_XL_2": {
+		"target": "PixArtMSSigma",
+		"unet_config": {
+			"input_size"  : 1024//8,
+			"token_num"   :  300,
+			"depth"       :   28,
+			"num_heads"   :   16,
+			"patch_size"  :    2,
+			"hidden_size" : 1152,
+			"micro_condition": False,
+			"pe_interpolation": 2,
+			"model_max_length": 300,
 		},
+		"sampling_settings" : sampling_settings,
 	},
 	"PixArt_XL_2": { # models/PixArt
 		"target": "PixArt",
 		"unet_config": {
 			"input_size"  :  512//8,
-			"lewei_scale" :    1,
+			"token_num"   :  120,
 			"depth"       :   28,
 			"num_heads"   :   16,
 			"patch_size"  :    2,
 			"hidden_size" : 1152,
+			"pe_interpolation": 1,
 		},
-		"sampling_settings": {
-			"beta_schedule" : "sqrt_linear",
-			"linear_start"  : 0.0001,
-			"linear_end"    : 0.02,
-			"timesteps"     : 1000,
-		},
+		"sampling_settings" : sampling_settings,
 	},
 }
 
@@ -77,3 +91,7 @@ pixart_res = {
 		'3.62': [928, 256], '3.75': [960, 256], '3.88': [992, 256], '4.00': [1024,256]
 	},
 }
+# These should be the same
+pixart_res.update({
+	"PixArtMS_Sigma_XL_2_512": pixart_res["PixArt_XL_2"],
+})

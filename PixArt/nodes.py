@@ -7,7 +7,6 @@ from comfy import utils
 from .conf import pixart_conf, pixart_res
 from .lora import load_pixart_lora
 from .loader import load_pixart
-from .sampler import sample_pixart
 
 class PixArtCheckpointLoader:
 	@classmethod
@@ -141,44 +140,6 @@ class PixArtControlNetCond:
 			cond[c][1]["cn_hint"] = latent["samples"] * 0.18215
 		return (cond,)
 
-class PixArtDPMSampler:
-	"""
-	The sampler from the reference code.
-	"""
-	@classmethod
-	def INPUT_TYPES(s):
-		return {
-			"required": {
-				"model": ("MODEL", ),
-				"seed": ("INT", {"default": 0, "min": 0, "max": 0xffffffffffffffff}),
-				"steps": ("INT", {"default": 20, "min": 1, "max": 10000}),
-				"cfg": ("FLOAT", {"default": 4.5, "min": 0.0, "max": 100.0, "step":0.5, "round": 0.01}),
-				"noise_schedule": (["linear","squaredcos_cap_v2"],{"default":"linear"}),
-				"noise_schedule_vp": (["linear","discrete"],{"default":"discrete"}),
-				"positive": ("CONDITIONING", ),
-				"negative": ("CONDITIONING", ),
-				"latent_image": ("LATENT", ),
-			}
-		}
-	RETURN_TYPES = ("LATENT",)
-	FUNCTION = "sample"
-	CATEGORY = "ExtraModels/PixArt"
-	TITLE = "PixArt DPM Sampler [Reference]"
-
-	def sample(self, model, seed, steps, cfg, noise_schedule, noise_schedule_vp, positive, negative, latent_image):
-		samples = sample_pixart(
-			model    = model,
-			seed     = seed,
-			steps    = steps,
-			cfg      = cfg,
-			positive = positive,
-			negative = negative,
-			latent_image = latent_image["samples"],
-			noise_schedule = noise_schedule,
-			noise_schedule_vp = noise_schedule_vp,
-		)
-		return ({"samples":samples},)
-
 class PixArtT5TextEncode:
 	"""
 	Reference code, mostly to verify compatibility.
@@ -236,7 +197,6 @@ NODE_CLASS_MAPPINGS = {
 	"PixArtCheckpointLoader" : PixArtCheckpointLoader,
 	"PixArtResolutionSelect" : PixArtResolutionSelect,
 	"PixArtLoraLoader" : PixArtLoraLoader,
-	"PixArtDPMSampler" : PixArtDPMSampler,
 	"PixArtT5TextEncode" : PixArtT5TextEncode,
 	"PixArtResolutionCond" : PixArtResolutionCond,
 	"PixArtControlNetCond" : PixArtControlNetCond,
