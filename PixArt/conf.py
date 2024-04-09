@@ -93,5 +93,6 @@ pixart_res = {
 }
 # These should be the same
 pixart_res.update({
+	"PixArtMS_Sigma_XL_2": pixart_res["PixArtMS_XL_2"],
 	"PixArtMS_Sigma_XL_2_512": pixart_res["PixArt_XL_2"],
 })

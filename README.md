@@ -72,9 +72,9 @@ Limitations:
 
 ### PixArt Sigma
 
-Currently only the early 256 and 512 checkpoints are released, out of which only the 512 is supported in this custom node pack.
+The Sigma models work just like the normal ones. Out of the released checkpoints, the 512 and 1024 one are supported.
 
-You can find the [512 checkpoint here](https://huggingface.co/PixArt-alpha/PixArt-Sigma/blob/main/PixArt-Sigma-XL-2-512-MS.pth). Place it in your models folder and select the appropriate type in the model loader / resolution selection node.
+You can find the [1024 checkpoint here](https://huggingface.co/PixArt-alpha/PixArt-Sigma/blob/main/PixArt-Sigma-XL-2-1024-MS.pth). Place it in your models folder and select the appropriate type in the model loader / resolution selection node.
 
 > [!IMPORTANT]
 > Make sure to select an SDXL VAE for PixArt Sigma!
