@@ -35,6 +35,12 @@ class EXM_T5v11:
 			self.load_device = "cpu"
 			self.offload_device = "cpu"
 			self.init_device="cpu"
+		elif device.startswith("cuda"):
+			print("Direct CUDA device override!\nVRAM will not be freed by default.")
+			size = 0
+			self.load_device = device
+			self.offload_device = device
+			self.init_device = device
 		else:
 			size = 0
 			self.load_device = model_management.get_torch_device()

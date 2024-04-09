@@ -33,7 +33,9 @@ class T5v11Model(torch.nn.Module):
             else:
                 if dtype: model_args["torch_dtype"] = dtype
                 self.bnb = False
-                # TODO: custom device map?
+                # second GPU offload hack part 2
+                if device.startswith("cuda"):
+                    model_args["device_map"] = device
             print(f"Loading T5 from '{textmodel_path}'")
             self.transformer = T5EncoderModel.from_pretrained(textmodel_path, **model_args)
         else:

@@ -33,12 +33,16 @@ else: dtypes += ["FP8 E4M3", "FP8 E5M2"]
 class T5v11Loader:
 	@classmethod
 	def INPUT_TYPES(s):
+		devices = ["auto", "cpu", "gpu"]
+		# hack for using second GPU as offload
+		for k in range(1, torch.cuda.device_count()):
+			devices.append(f"cuda:{k}")
 		return {
 			"required": {
 				"t5v11_name": (folder_paths.get_filename_list("t5"),),
 				"t5v11_ver": (["xxl"],),
 				"path_type": (["folder", "file"],),
-				"device": (["auto", "cpu", "gpu"],{"default":"cpu"}),
+				"device": (devices, {"default":"cpu"}),
 				"dtype": (dtypes,),
 			}
 		}
