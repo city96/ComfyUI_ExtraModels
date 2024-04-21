@@ -53,7 +53,7 @@ class T5v11Loader:
 
 	def load_model(self, t5v11_name, t5v11_ver, path_type, device, dtype):
 		if "bnb" in dtype:
-			assert device == "gpu", "BitsAndBytes only works on CUDA! Set device to 'gpu'."
+			assert device == "gpu" or device.startswith("cuda"), "BitsAndBytes only works on CUDA! Set device to 'gpu'."
 		dtype = string_to_dtype(dtype, "text_encoder")
 		if device == "cpu":
 			assert dtype in [None, torch.float32], f"Can't use dtype '{dtype}' with CPU! Set dtype to 'default'."
