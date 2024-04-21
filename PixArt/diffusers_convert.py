@@ -72,7 +72,8 @@ def convert_state_dict(state_dict):
 	else:
 		cmap = conversion_map
 
-	new_state_dict = {k: state_dict[v] for k,v in cmap}
+	missing = [k for k,v in cmap if v not in state_dict]
+	new_state_dict = {k: state_dict[v] for k,v in cmap if k not in missing}
 	matched = list(v for k,v in cmap if v in state_dict.keys())
 	
 	for depth in range(28):
@@ -96,6 +97,10 @@ def convert_state_dict(state_dict):
 		print(f"PixArt: UNET conversion has leftover keys! ({len(matched)} vs {len(state_dict)})")
 		print(list( set(state_dict.keys()) - set(matched) ))
 
+	if len(missing) > 0:
+		print(f"PixArt: UNET conversion has missing keys!")
+		print(missing)
+
 	return new_state_dict
 
 # Same as above but for LoRA weights:
@@ -118,7 +123,8 @@ def convert_lora_state_dict(state_dict):
 		cmap.append((rep_ak(k), rep_ap(v)))
 		cmap.append((rep_bk(k), rep_bp(v)))
 
-	new_state_dict = {k: state_dict[v] for k,v in cmap}
+	missing = [k for k,v in cmap if v not in state_dict]
+	new_state_dict = {k: state_dict[v] for k,v in cmap if k not in missing}
 	matched = list(v for k,v in cmap if v in state_dict.keys())
 
 	for fp, fk in ((rep_ap, rep_ak),(rep_bp, rep_bk)):
@@ -141,5 +147,9 @@ def convert_lora_state_dict(state_dict):
 	if len(matched) < len(state_dict):
 		print(f"PixArt: LoRA conversion has leftover keys! ({len(matched)} vs {len(state_dict)})")
 		print(list( set(state_dict.keys()) - set(matched) ))
+
+	if len(missing) > 0:
+		print(f"PixArt: LoRA conversion has missing keys!")
+		print(missing)
 
 	return new_state_dict
