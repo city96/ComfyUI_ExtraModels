@@ -72,9 +72,9 @@ Limitations:
 
 ### PixArt Sigma
 
-The Sigma models work just like the normal ones. Out of the released checkpoints, the 512 and 1024 one are supported.
+The Sigma models work just like the normal ones. Out of the released checkpoints, the 512, 1024 and 2K one are supported.
 
-You can find the [1024 checkpoint here](https://huggingface.co/PixArt-alpha/PixArt-Sigma/blob/main/PixArt-Sigma-XL-2-1024-MS.pth). Place it in your models folder and select the appropriate type in the model loader / resolution selection node.
+You can find the [1024 checkpoint here](https://huggingface.co/PixArt-alpha/PixArt-Sigma/blob/main/PixArt-Sigma-XL-2-1024-MS.pth). Place it in your models folder and **select the appropriate type in the model loader / resolution selection node.**
 
 > [!IMPORTANT]
 > Make sure to select an SDXL VAE for PixArt Sigma!
@@ -131,6 +131,10 @@ You will need to download the following 4 files:
  - `pytorch_model.bin.index.json`
 
 Place them in your `ComfyUI/models/t5` folder. You can put them in a subfolder called "t5-v1.1-xxl" though it doesn't matter. There are int8 safetensor files in the other DeepFloyd repo, thought they didn't work for me.
+
+For faster loading/smaller file sizes, you may pick one of the following alternative downloads:
+- [FP16 converted version](https://huggingface.co/theunlikely/t5-v1_1-xxl-fp16/tree/main) - Same layout as the original, download both safetensor files as well as the `*.index.json` and `config.json` files.
+- [BF16 converter version](https://huggingface.co/city96/t5-v1_1-xxl-encoder-bf16/tree/main) - Merged into a single safetensor, only `model.safetensors` (+`config.json` for folder mode) are reqired.
 
 ### Usage
 
