@@ -7,13 +7,15 @@ from .loader import load_t5
 from ..utils.dtype import string_to_dtype
 
 # initialize custom folder path
-# TODO: integrate with `extra_model_paths.yaml`
 os.makedirs(
 	os.path.join(folder_paths.models_dir,"t5"),
 	exist_ok = True,
 )
 folder_paths.folder_names_and_paths["t5"] = (
-	[os.path.join(folder_paths.models_dir,"t5")],
+	[
+		os.path.join(folder_paths.models_dir,"t5"),
+		*folder_paths.folder_names_and_paths.get("t5", [[],set()])[0]
+	],
 	folder_paths.supported_pt_extensions
 )
 
