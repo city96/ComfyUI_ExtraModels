@@ -155,7 +155,11 @@ On windows, you may need a newer version of bitsandbytes for 4bit. Try `python -
 
 ## VAE
 
-A few custom VAE models are supported. The option to select a different dtype when loading is also possible, which can be useful for testing/comparisons.
+A few custom VAE models are supported. The option to select a different dtype when loading is also possible, which can be useful for testing/comparisons. You can load the models listed below using the "ExtraVAELoader" node.
+
+**Models like PixArt/DiT do NOT need a special VAE. Unless mentioned, use one of the following as you would with any other model:**
+- [VAE for SD1.X, DiT and PixArt alpha](https://huggingface.co/stabilityai/sd-vae-ft-mse-original/blob/main/vae-ft-mse-840000-ema-pruned.safetensors).
+- [VAE for SDXL and PixArt sigma](https://huggingface.co/madebyollin/sdxl-vae-fp16-fix/blob/main/diffusion_pytorch_model.safetensors)
 
 ### Consistency Decoder
 
