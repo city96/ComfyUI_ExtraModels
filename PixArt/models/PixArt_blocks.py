@@ -189,6 +189,7 @@ class AttentionKVCompress(Attention_):
             q, k, v = map(lambda t: t.transpose(1, 2),(q, k, v),)
             x = torch.nn.functional.scaled_dot_product_attention(
                 q, k, v,
+                dropout_p=self.attn_drop.p,
                 attn_mask=attn_bias
             ).transpose(1, 2).contiguous()
         x = x.view(B, N, C)
