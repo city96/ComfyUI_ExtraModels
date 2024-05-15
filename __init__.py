@@ -10,6 +10,10 @@ else:
 	# from .DeciDiffusion.nodes import NODE_CLASS_MAPPINGS as DeciDiffusion_Nodes
 	# NODE_CLASS_MAPPINGS.update(DeciDiffusion_Nodes)
 
+	# HunYuan
+	from .HunYuan.nodes import NODE_CLASS_MAPPINGS as HunYuan_Nodes
+	NODE_CLASS_MAPPINGS.update(HunYuan_Nodes)
+
 	# DiT
 	from .DiT.nodes import NODE_CLASS_MAPPINGS as DiT_Nodes
 	NODE_CLASS_MAPPINGS.update(DiT_Nodes)
