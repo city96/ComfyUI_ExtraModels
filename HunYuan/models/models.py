@@ -1,8 +1,6 @@
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-from diffusers.configuration_utils import ConfigMixin, register_to_config
-from diffusers.models import ModelMixin
 from timm.models.vision_transformer import Mlp
 
 from .attn_layers import Attention, FlashCrossMHAModified, FlashSelfMHAModified, CrossAttention
@@ -10,6 +8,35 @@ from .embedders import TimestepEmbedder, PatchEmbed, timestep_embedding
 from .norm_layers import RMSNorm
 from .poolers import AttentionPool
 
+
+class Resolution:
+    def __init__(self, width, height):
+        self.width = width
+        self.height = height
+
+    def __str__(self):
+        return f'{self.height}x{self.width}'
+
+
+class ResolutionGroup:
+    def __init__(self):
+        self.data = [
+            Resolution(768, 768),   # 1:1
+            Resolution(1024, 1024), # 1:1
+            Resolution(1280, 1280), # 1:1
+            Resolution(1024, 768),  # 4:3
+            Resolution(1152, 864),  # 4:3
+            Resolution(1280, 960),  # 4:3
+            Resolution(768, 1024),  # 3:4
+            Resolution(864, 1152),  # 3:4
+            Resolution(960, 1280),  # 3:4
+            Resolution(1280, 768),  # 16:9
+            Resolution(768, 1280),  # 9:16
+        ]
+        self.supported_sizes = set([(r.width, r.height) for r in self.data])
+
+    def is_valid(self, width, height):
+        return (width, height) in self.supported_sizes
 
 def modulate(x, shift, scale):
     return x * (1 + scale.unsqueeze(1)) + shift.unsqueeze(1)
@@ -152,9 +179,14 @@ class HunYuan(nn.Module):
             text_len_t5=256,
             norm="layer",
             infer_mode="torch",
+            use_fp16=True,
+            device="cuda",
             **kwargs,
     ):
         super().__init__()
+        self.device = device
+        self.use_fp16=use_fp16
+        self.dtype = torch.get_default_dtype()
         self.depth = depth
         self.learn_sigma = learn_sigma
         self.in_channels = in_channels
@@ -167,6 +199,7 @@ class HunYuan(nn.Module):
         self.text_len = text_len
         self.text_len_t5 = text_len_t5
         self.norm = norm
+        self.head_size = self.hidden_size // self.num_heads
 
         use_flash_attn = infer_mode == 'fa'
         qk_norm = True  # See http://arxiv.org/abs/2302.05442 for details.
@@ -222,9 +255,51 @@ class HunYuan(nn.Module):
 
         self.initialize_weights()
 
-    def forward(self,
+
+    def extra_conds(self, **kwargs):
+        out = {}
+        print(f'extra_conds_kwargs{kwargs}')
+
+        return out
+
+    def calc_rope(self, height, width):
+        from .posemb_layers import get_2d_rotary_pos_embed, get_fill_resize_and_crop
+        th = height // 8 // self.patch_size
+        tw = width // 8 // self.patch_size
+        base_size = 512 // 8 // self.patch_size
+        start, stop = get_fill_resize_and_crop((th, tw), base_size)
+        sub_args = [start, stop, (th, tw)]
+        rope = get_2d_rotary_pos_embed(self.head_size, *sub_args)
+        return rope
+    
+    def standard_shapes(self):
+        resolutions = ResolutionGroup()
+        freqs_cis_img = {}
+        for reso in resolutions.data:
+            freqs_cis_img[str(reso)] = self.calc_rope(reso.height, reso.width)
+        return resolutions, freqs_cis_img
+
+    def forward(self, x, timesteps, context, y=None, **kwargs):
+        with torch.cuda.amp.autocast():
+            context = context[:, 0]
+
+            ## run original forward pass
+            out = self.forward_raw(
+                x = x.to(self.dtype),
+                t = timesteps.to(self.dtype),
+                y = context.to(torch.int),
+            )
+
+            ## only return EPS
+            out = out.to(torch.float)
+            eps, rest = out[:, :self.in_channels], out[:, self.in_channels:]
+            torch.save(eps,"/home/admin/ComfyUI/output/eps.pt")
+            return eps[0].unsqueeze(0)
+
+    def forward_raw(self,
                 x,
                 t,
+                y,
                 encoder_hidden_states=None,
                 text_embedding_mask=None,
                 encoder_hidden_states_t5=None,
@@ -233,7 +308,7 @@ class HunYuan(nn.Module):
                 style=None,
                 cos_cis_img=None,
                 sin_cis_img=None,
-                return_dict=True,
+                return_dict=False,
                 ):
         """
         Forward pass of the encoder.
@@ -244,6 +319,7 @@ class HunYuan(nn.Module):
             (B, D, H, W)
         t: torch.Tensor
             (B)
+        y: (N, 1, 120, C) tensor of class labels
         encoder_hidden_states: torch.Tensor
             CLIP text embedding, (B, L_clip, D)
         text_embedding_mask: torch.Tensor
@@ -261,6 +337,21 @@ class HunYuan(nn.Module):
         return_dict: bool
             Whether to return a dictionary.
         """
+        
+        clip_prompt_embeds=torch.load("/home/admin/ComfyUI/output/clip_prompt_embeds.pt")
+        clip_attention_mask=torch.load("/home/admin/ComfyUI/output/clip_attention_mask.pt")
+        clip_negative_prompt_embeds=torch.load("/home/admin/ComfyUI/output/clip_negative_prompt_embeds.pt")
+        clip_negative_attention_mask=torch.load("/home/admin/ComfyUI/output/clip_negative_attention_mask.pt")
+        mt5_prompt_embeds=torch.load("/home/admin/ComfyUI/output/mt5_prompt_embeds.pt")
+        mt5_attention_mask=torch.load("/home/admin/ComfyUI/output/mt5_attention_mask.pt")
+        mt5_negative_prompt_embeds=torch.load("/home/admin/ComfyUI/output/mt5_negative_prompt_embeds.pt")
+        mt5_negative_attention_mask=torch.load("/home/admin/ComfyUI/output/mt5_negative_attention_mask.pt")
+
+        encoder_hidden_states=torch.cat((clip_prompt_embeds,clip_negative_prompt_embeds))
+        encoder_hidden_states_t5=torch.cat((mt5_prompt_embeds,mt5_negative_prompt_embeds))
+        text_embedding_mask=torch.cat((clip_attention_mask,clip_negative_attention_mask))
+        text_embedding_mask_t5=torch.cat((mt5_attention_mask,mt5_negative_attention_mask))
+
 
         text_states = encoder_hidden_states                     # 2,77,1024
         text_states_t5 = encoder_hidden_states_t5               # 2,256,2048
@@ -280,6 +371,7 @@ class HunYuan(nn.Module):
         # ========================= Build time and image embedding =========================
         t = self.t_embedder(t)
         x = self.x_embedder(x)
+        y = y.to(self.dtype)
 
         # Get image RoPE embedding according to `reso`lution.
         freqs_cis_img = (cos_cis_img, sin_cis_img)
@@ -288,18 +380,36 @@ class HunYuan(nn.Module):
         # Build text tokens with pooling
         extra_vec = self.pooler(encoder_hidden_states_t5)
 
+        batch_size=1
+
+        target_height=1024
+        target_width=1024
+
         # Build image meta size tokens
+        size_cond = list((1024,1024)) + [1024, 1024, 0, 0]
+        image_meta_size = torch.as_tensor([size_cond] * 2 * batch_size, device=self.device)
+
         image_meta_size = timestep_embedding(image_meta_size.view(-1), 256)   # [B * 6, 256]
-        if self.args.use_fp16:
+        if self.use_fp16:
             image_meta_size = image_meta_size.half()
         image_meta_size = image_meta_size.view(-1, 6 * 256)
         extra_vec = torch.cat([extra_vec, image_meta_size], dim=1)  # [B, D + 6 * 256]
 
         # Build style tokens
+        style = torch.as_tensor([0, 0] * batch_size, device=self.device)
+
         style_embedding = self.style_embedder(style)
         extra_vec = torch.cat([extra_vec, style_embedding], dim=1)
 
         # Concatenate all extra vectors
+        resolutions, freqs_cis_img = self.standard_shapes() 
+        
+        reso = f'{target_height}x{target_width}'
+        if reso in freqs_cis_img:
+            freqs_cis_img = freqs_cis_img[reso]
+        else:
+            freqs_cis_img = self.calc_rope(target_height, target_width)
+
         c = t + self.extra_embedder(extra_vec)  # [B, D]
 
         # ========================= Forward pass through HunYuanDiT blocks =========================
@@ -369,267 +479,6 @@ class HunYuan(nn.Module):
         x = torch.einsum('nhwpqc->nchpwq', x)
         imgs = x.reshape(shape=(x.shape[0], c, h * p, w * p))
         return imgs
-
-class HunYuanDiT(ModelMixin, ConfigMixin):
-    """
-    HunYuanDiT: Diffusion model with a Transformer backbone.
-
-    Inherit ModelMixin and ConfigMixin to be compatible with the sampler StableDiffusionPipeline of diffusers.
-
-    Parameters
-    ----------
-    args: argparse.Namespace
-        The arguments parsed by argparse.
-    input_size: tuple
-        The size of the input image.
-    patch_size: int
-        The size of the patch.
-    in_channels: int
-        The number of input channels.
-    hidden_size: int
-        The hidden size of the transformer backbone.
-    depth: int
-        The number of transformer blocks.
-    num_heads: int
-        The number of attention heads.
-    mlp_ratio: float
-        The ratio of the hidden size of the MLP in the transformer block.
-    log_fn: callable
-        The logging function.
-    """
-    @register_to_config
-    def __init__(
-            self, args,
-            input_size=(32, 32),
-            patch_size=2,
-            in_channels=4,
-            hidden_size=1152,
-            depth=28,
-            num_heads=16,
-            mlp_ratio=4.0,
-            log_fn=print,
-    ):
-        super().__init__()
-        self.args = args
-        self.log_fn = log_fn
-        self.depth = depth
-        self.learn_sigma = args.learn_sigma
-        self.in_channels = in_channels
-        self.out_channels = in_channels * 2 if args.learn_sigma else in_channels
-        self.patch_size = patch_size
-        self.num_heads = num_heads
-        self.hidden_size = hidden_size
-        self.text_states_dim = args.text_states_dim
-        self.text_states_dim_t5 = args.text_states_dim_t5
-        self.text_len = args.text_len
-        self.text_len_t5 = args.text_len_t5
-        self.norm = args.norm
-
-        use_flash_attn = args.infer_mode == 'fa'
-        if use_flash_attn:
-            log_fn(f"    Enable Flash Attention.")
-        qk_norm = True  # See http://arxiv.org/abs/2302.05442 for details.
-
-        self.mlp_t5 = nn.Sequential(
-            nn.Linear(self.text_states_dim_t5, self.text_states_dim_t5 * 4, bias=True),
-            FP32_SiLU(),
-            nn.Linear(self.text_states_dim_t5 * 4, self.text_states_dim, bias=True),
-        )
-        # learnable replace
-        self.text_embedding_padding = nn.Parameter(
-            torch.randn(self.text_len + self.text_len_t5, self.text_states_dim, dtype=torch.float32))
-
-        # Attention pooling
-        self.pooler = AttentionPool(self.text_len_t5, self.text_states_dim_t5, num_heads=8, output_dim=1024)
-
-        # Here we use a default learned embedder layer for future extension.
-        self.style_embedder = nn.Embedding(1, hidden_size)
-
-        # Image size and crop size conditions
-        self.extra_in_dim = 256 * 6 + hidden_size
-
-        # Text embedding for `add`
-        self.x_embedder = PatchEmbed(input_size, patch_size, in_channels, hidden_size)
-        self.t_embedder = TimestepEmbedder(hidden_size)
-        self.extra_in_dim += 1024
-        self.extra_embedder = nn.Sequential(
-            nn.Linear(self.extra_in_dim, hidden_size * 4),
-            FP32_SiLU(),
-            nn.Linear(hidden_size * 4, hidden_size, bias=True),
-        )
-
-        # Image embedding
-        num_patches = self.x_embedder.num_patches
-        log_fn(f"    Number of tokens: {num_patches}")
-
-        # HUnYuanDiT Blocks
-        self.blocks = nn.ModuleList([
-            HunYuanDiTBlock(hidden_size=hidden_size,
-                            c_emb_size=hidden_size,
-                            num_heads=num_heads,
-                            mlp_ratio=mlp_ratio,
-                            text_states_dim=self.text_states_dim,
-                            use_flash_attn=use_flash_attn,
-                            qk_norm=qk_norm,
-                            norm_type=self.norm,
-                            skip=layer > depth // 2,
-                            )
-            for layer in range(depth)
-        ])
-
-        self.final_layer = FinalLayer(hidden_size, hidden_size, patch_size, self.out_channels)
-        self.unpatchify_channels = self.out_channels
-
-        self.initialize_weights()
-
-    def forward(self,
-                x,
-                t,
-                encoder_hidden_states=None,
-                text_embedding_mask=None,
-                encoder_hidden_states_t5=None,
-                text_embedding_mask_t5=None,
-                image_meta_size=None,
-                style=None,
-                cos_cis_img=None,
-                sin_cis_img=None,
-                return_dict=True,
-                ):
-        """
-        Forward pass of the encoder.
-
-        Parameters
-        ----------
-        x: torch.Tensor
-            (B, D, H, W)
-        t: torch.Tensor
-            (B)
-        encoder_hidden_states: torch.Tensor
-            CLIP text embedding, (B, L_clip, D)
-        text_embedding_mask: torch.Tensor
-            CLIP text embedding mask, (B, L_clip)
-        encoder_hidden_states_t5: torch.Tensor
-            T5 text embedding, (B, L_t5, D)
-        text_embedding_mask_t5: torch.Tensor
-            T5 text embedding mask, (B, L_t5)
-        image_meta_size: torch.Tensor
-            (B, 6)
-        style: torch.Tensor
-            (B)
-        cos_cis_img: torch.Tensor
-        sin_cis_img: torch.Tensor
-        return_dict: bool
-            Whether to return a dictionary.
-        """
-
-        text_states = encoder_hidden_states                     # 2,77,1024
-        text_states_t5 = encoder_hidden_states_t5               # 2,256,2048
-        text_states_mask = text_embedding_mask.bool()           # 2,77
-        text_states_t5_mask = text_embedding_mask_t5.bool()     # 2,256
-        b_t5, l_t5, c_t5 = text_states_t5.shape
-        text_states_t5 = self.mlp_t5(text_states_t5.view(-1, c_t5))
-        text_states = torch.cat([text_states, text_states_t5.view(b_t5, l_t5, -1)], dim=1)  # 2,205，1024
-        clip_t5_mask = torch.cat([text_states_mask, text_states_t5_mask], dim=-1)
-
-        clip_t5_mask = clip_t5_mask
-        text_states = torch.where(clip_t5_mask.unsqueeze(2), text_states, self.text_embedding_padding.to(text_states))
-
-        _, _, oh, ow = x.shape
-        th, tw = oh // self.patch_size, ow // self.patch_size
-
-        # ========================= Build time and image embedding =========================
-        t = self.t_embedder(t)
-        x = self.x_embedder(x)
-
-        # Get image RoPE embedding according to `reso`lution.
-        freqs_cis_img = (cos_cis_img, sin_cis_img)
-
-        # ========================= Concatenate all extra vectors =========================
-        # Build text tokens with pooling
-        extra_vec = self.pooler(encoder_hidden_states_t5)
-
-        # Build image meta size tokens
-        image_meta_size = timestep_embedding(image_meta_size.view(-1), 256)   # [B * 6, 256]
-        if self.args.use_fp16:
-            image_meta_size = image_meta_size.half()
-        image_meta_size = image_meta_size.view(-1, 6 * 256)
-        extra_vec = torch.cat([extra_vec, image_meta_size], dim=1)  # [B, D + 6 * 256]
-
-        # Build style tokens
-        style_embedding = self.style_embedder(style)
-        extra_vec = torch.cat([extra_vec, style_embedding], dim=1)
-
-        # Concatenate all extra vectors
-        c = t + self.extra_embedder(extra_vec)  # [B, D]
-
-        # ========================= Forward pass through HunYuanDiT blocks =========================
-        skips = []
-        for layer, block in enumerate(self.blocks):
-            if layer > self.depth // 2:
-                skip = skips.pop()
-                x = block(x, c, text_states, freqs_cis_img, skip)   # (N, L, D)
-            else:
-                x = block(x, c, text_states, freqs_cis_img)         # (N, L, D)
-
-            if layer < (self.depth // 2 - 1):
-                skips.append(x)
-
-        # ========================= Final layer =========================
-        x = self.final_layer(x, c)                              # (N, L, patch_size ** 2 * out_channels)
-        x = self.unpatchify(x, th, tw)                          # (N, out_channels, H, W)
-
-        if return_dict:
-            return {'x': x}
-        return x
-
-    def initialize_weights(self):
-        # Initialize transformer layers:
-        def _basic_init(module):
-            if isinstance(module, nn.Linear):
-                torch.nn.init.xavier_uniform_(module.weight)
-                if module.bias is not None:
-                    nn.init.constant_(module.bias, 0)
-        self.apply(_basic_init)
-
-        # Initialize patch_embed like nn.Linear (instead of nn.Conv2d):
-        w = self.x_embedder.proj.weight.data
-        nn.init.xavier_uniform_(w.view([w.shape[0], -1]))
-        nn.init.constant_(self.x_embedder.proj.bias, 0)
-
-        # Initialize label embedding table:
-        nn.init.normal_(self.extra_embedder[0].weight, std=0.02)
-        nn.init.normal_(self.extra_embedder[2].weight, std=0.02)
-
-        # Initialize timestep embedding MLP:
-        nn.init.normal_(self.t_embedder.mlp[0].weight, std=0.02)
-        nn.init.normal_(self.t_embedder.mlp[2].weight, std=0.02)
-
-        # Zero-out adaLN modulation layers in HunYuanDiT blocks:
-        for block in self.blocks:
-            nn.init.constant_(block.default_modulation[-1].weight, 0)
-            nn.init.constant_(block.default_modulation[-1].bias, 0)
-
-        # Zero-out output layers:
-        nn.init.constant_(self.final_layer.adaLN_modulation[-1].weight, 0)
-        nn.init.constant_(self.final_layer.adaLN_modulation[-1].bias, 0)
-        nn.init.constant_(self.final_layer.linear.weight, 0)
-        nn.init.constant_(self.final_layer.linear.bias, 0)
-
-    def unpatchify(self, x, h, w):
-        """
-        x: (N, T, patch_size**2 * C)
-        imgs: (N, H, W, C)
-        """
-        c = self.unpatchify_channels
-        p = self.x_embedder.patch_size[0]
-        # h = w = int(x.shape[1] ** 0.5)
-        assert h * w == x.shape[1]
-
-        x = x.reshape(shape=(x.shape[0], h, w, p, p, c))
-        x = torch.einsum('nhwpqc->nchpwq', x)
-        imgs = x.reshape(shape=(x.shape[0], c, h * p, w * p))
-        return imgs
-
 
 #################################################################################
 #                            HunYuanDiT Configs                                 #
