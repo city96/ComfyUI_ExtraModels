@@ -7,6 +7,7 @@ from .attn_layers import Attention, FlashCrossMHAModified, FlashSelfMHAModified,
 from .embedders import TimestepEmbedder, PatchEmbed, timestep_embedding
 from .norm_layers import RMSNorm
 from .poolers import AttentionPool
+import folder_paths
 
 
 class Resolution:
@@ -186,7 +187,7 @@ class HunYuan(nn.Module):
         super().__init__()
         self.device = device
         self.use_fp16=use_fp16
-        self.dtype = torch.get_default_dtype()
+        self.dtype = torch.float16
         self.depth = depth
         self.learn_sigma = learn_sigma
         self.in_channels = in_channels
@@ -280,21 +281,22 @@ class HunYuan(nn.Module):
         return resolutions, freqs_cis_img
 
     def forward(self, x, timesteps, context, y=None, **kwargs):
-        with torch.cuda.amp.autocast():
-            context = context[:, 0]
+        #with torch.cuda.amp.autocast():
+        context = context[:, 0]
 
-            ## run original forward pass
-            out = self.forward_raw(
-                x = x.to(self.dtype),
-                t = timesteps.to(self.dtype),
-                y = context.to(torch.int),
-            )
+        ## run original forward pass
+        out = self.forward_raw(
+            x = x.to(self.dtype),
+            t = timesteps.to(self.dtype),
+            y = context.to(torch.int),
+        )
 
-            ## only return EPS
-            out = out.to(torch.float)
-            eps, rest = out[:, :self.in_channels], out[:, self.in_channels:]
-            torch.save(eps,"/home/admin/ComfyUI/output/eps.pt")
-            return eps[0].unsqueeze(0)
+        ## only return EPS
+        out = out.to(torch.float16)
+        torch.save(out,f"{folder_paths.output_directory}/out.pt")
+        eps, rest = out[:, :self.in_channels], out[:, self.in_channels:]
+        torch.save(eps,f"{folder_paths.output_directory}/eps.pt")
+        return eps[0].unsqueeze(0)
 
     def forward_raw(self,
                 x,
@@ -338,14 +340,14 @@ class HunYuan(nn.Module):
             Whether to return a dictionary.
         """
         
-        clip_prompt_embeds=torch.load("/home/admin/ComfyUI/output/clip_prompt_embeds.pt")
-        clip_attention_mask=torch.load("/home/admin/ComfyUI/output/clip_attention_mask.pt")
-        clip_negative_prompt_embeds=torch.load("/home/admin/ComfyUI/output/clip_negative_prompt_embeds.pt")
-        clip_negative_attention_mask=torch.load("/home/admin/ComfyUI/output/clip_negative_attention_mask.pt")
-        mt5_prompt_embeds=torch.load("/home/admin/ComfyUI/output/mt5_prompt_embeds.pt")
-        mt5_attention_mask=torch.load("/home/admin/ComfyUI/output/mt5_attention_mask.pt")
-        mt5_negative_prompt_embeds=torch.load("/home/admin/ComfyUI/output/mt5_negative_prompt_embeds.pt")
-        mt5_negative_attention_mask=torch.load("/home/admin/ComfyUI/output/mt5_negative_attention_mask.pt")
+        clip_prompt_embeds=torch.load(f"{folder_paths.output_directory}/clip_prompt_embeds.pt").half()
+        clip_attention_mask=torch.load(f"{folder_paths.output_directory}/clip_attention_mask.pt").half()
+        clip_negative_prompt_embeds=torch.load(f"{folder_paths.output_directory}/clip_negative_prompt_embeds.pt").half()
+        clip_negative_attention_mask=torch.load(f"{folder_paths.output_directory}/clip_negative_attention_mask.pt").half()
+        mt5_prompt_embeds=torch.load(f"{folder_paths.output_directory}/mt5_prompt_embeds.pt").half()
+        mt5_attention_mask=torch.load(f"{folder_paths.output_directory}/mt5_attention_mask.pt").half()
+        mt5_negative_prompt_embeds=torch.load(f"{folder_paths.output_directory}/mt5_negative_prompt_embeds.pt").half()
+        mt5_negative_attention_mask=torch.load(f"{folder_paths.output_directory}/mt5_negative_attention_mask.pt").half()
 
         encoder_hidden_states=torch.cat((clip_prompt_embeds,clip_negative_prompt_embeds))
         encoder_hidden_states_t5=torch.cat((mt5_prompt_embeds,mt5_negative_prompt_embeds))

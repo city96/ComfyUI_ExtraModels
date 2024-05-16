@@ -3,9 +3,15 @@ List of all DiT model types / settings
 """
 sampling_settings = {
 	"beta_schedule" : "sqrt_linear",
-	"linear_start"  : 0.0001,
-	"linear_end"    : 0.02,
+	"linear_start"  : 0.00085,
+	"linear_end"    : 0.03,
 	"timesteps"     : 1000,
+	'steps_offset': 1,
+	'clip_sample': False,
+	'clip_sample_range': 1.0,
+	'beta_start': 0.00085,
+	'beta_end': 0.03,
+	'prediction_type': 'v_prediction',
 }
 
 dit_conf = {
