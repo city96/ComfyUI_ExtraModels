@@ -95,14 +95,14 @@ class MT5TextEncode:
 		#mt5_negative_prompt_embeds=mt5_negative_prompt_embeds[0].permute(1,0)
 		#mt5_negative_prompt_embeds=torch.cat((mt5_negative_prompt_embeds,mt5_negative_attention_mask))
 		
-		torch.save(clip_prompt_embeds,"/home/admin/ComfyUI/output/clip_prompt_embeds.pt")
-		torch.save(clip_attention_mask,"/home/admin/ComfyUI/output/clip_attention_mask.pt")
-		torch.save(clip_negative_prompt_embeds,"/home/admin/ComfyUI/output/clip_negative_prompt_embeds.pt")
-		torch.save(clip_negative_attention_mask,"/home/admin/ComfyUI/output/clip_negative_attention_mask.pt")
-		torch.save(mt5_prompt_embeds,"/home/admin/ComfyUI/output/mt5_prompt_embeds.pt")
-		torch.save(mt5_attention_mask,"/home/admin/ComfyUI/output/mt5_attention_mask.pt")
-		torch.save(mt5_negative_prompt_embeds,"/home/admin/ComfyUI/output/mt5_negative_prompt_embeds.pt")
-		torch.save(mt5_negative_attention_mask,"/home/admin/ComfyUI/output/mt5_negative_attention_mask.pt")
+		torch.save(clip_prompt_embeds,f"{folder_paths.output_directory}/clip_prompt_embeds.pt")
+		torch.save(clip_attention_mask,f"{folder_paths.output_directory}/clip_attention_mask.pt")
+		torch.save(clip_negative_prompt_embeds,f"{folder_paths.output_directory}/clip_negative_prompt_embeds.pt")
+		torch.save(clip_negative_attention_mask,f"{folder_paths.output_directory}/clip_negative_attention_mask.pt")
+		torch.save(mt5_prompt_embeds,f"{folder_paths.output_directory}/mt5_prompt_embeds.pt")
+		torch.save(mt5_attention_mask,f"{folder_paths.output_directory}/mt5_attention_mask.pt")
+		torch.save(mt5_negative_prompt_embeds,f"{folder_paths.output_directory}/mt5_negative_prompt_embeds.pt")
+		torch.save(mt5_negative_attention_mask,f"{folder_paths.output_directory}/mt5_negative_attention_mask.pt")
 
 		return ([[clip_prompt_embeds, {"clip_attention_mask":clip_attention_mask}]],[[clip_negative_prompt_embeds, {"clip_attention_mask":clip_negative_attention_mask}]], )
 
