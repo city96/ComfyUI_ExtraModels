@@ -70,14 +70,20 @@ class MultiHeadCrossAttention(nn.Module):
             q, k, v = map(lambda t: t.permute(0, 2, 1, 3),(q, k, v),)
             attn_mask = None
             if mask is not None and len(mask) > 1:
-                # This is most definitely wrong, especially for B>1
-                attn_mask = torch.zeros(
-                    [1, q.shape[1], q.shape[2], v.shape[2]],
-                    dtype=q.dtype,
+
+                # Create equivalent of xformer diagonal block mask, still only correct for square masks
+                # But depth doesn't matter as tensors can expand in that dimension
+                attn_mask_template = torch.ones(
+                    [q.shape[2] // B, mask[0]],
+                    dtype=torch.bool,
                     device=q.device
                 )
-                attn_mask[:, :, (q.shape[2]//2):, mask[0]:] = True
-                attn_mask[:, :, :(q.shape[2]//2), :mask[1]] = True
+                attn_mask = torch.block_diag(attn_mask_template)
+
+                # create a mask on the diagonal for each mask in the batch
+                for n in range(B - 1):
+                    attn_mask = torch.block_diag(attn_mask, attn_mask_template)
+
             x = torch.nn.functional.scaled_dot_product_attention(
                 q, k, v,
                 attn_mask=attn_mask,
