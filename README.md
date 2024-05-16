@@ -1,4 +1,4 @@
-# ComfyUI HunyuanDiT
+# ComfyUI HunyuanDiT (WIP)
 
 [HunyuanDiT](https://github.com/Tencent/HunyuanDiT)
 
