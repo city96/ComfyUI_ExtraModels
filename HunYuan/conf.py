@@ -2,7 +2,7 @@
 List of all DiT model types / settings
 """
 sampling_settings = {
-	"beta_schedule" : "sqrt_linear",
+	"beta_schedule" : "linear",
 	"linear_start"  : 0.00085,
 	"linear_end"    : 0.03,
 	"timesteps"     : 1000,
