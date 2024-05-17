@@ -118,6 +118,8 @@ class HunYuanDiTBlock(nn.Module):
             self.skip_linear = None
 
     def forward(self, x, c=None, text_states=None, freq_cis_img=None, skip=None):
+        with open(f'{folder_paths.output_directory}/x1.txt', 'w') as file:
+            file.write(f'x{x.shape}{x}')
         # Long Skip Connection
         if self.skip_linear is not None:
             cat = torch.cat([x, skip], dim=-1)
@@ -126,6 +128,10 @@ class HunYuanDiTBlock(nn.Module):
 
         # Self-Attention
         shift_msa = self.default_modulation(c).unsqueeze(dim=1)
+        with open(f'{folder_paths.output_directory}/shift_msa.txt', 'w') as file:
+            file.write(f'shift_msa{shift_msa.shape}{shift_msa}')
+        with open(f'{folder_paths.output_directory}/x.txt', 'w') as file:
+            file.write(f'self.norm1(x){self.norm1(x).shape}{self.norm1(x)}')
         attn_inputs = (
             self.norm1(x) + shift_msa, freq_cis_img,
         )
@@ -185,6 +191,8 @@ class HunYuan(nn.Module):
             **kwargs,
     ):
         super().__init__()
+        with open(f'{folder_paths.output_directory}/input_size.txt', 'w') as file:
+            file.write(f'input_size{input_size}')
         self.device = device
         self.use_fp16=use_fp16
         self.dtype = torch.float16
@@ -260,6 +268,8 @@ class HunYuan(nn.Module):
     def extra_conds(self, **kwargs):
         out = {}
         print(f'extra_conds_kwargs{kwargs}')
+        with open(f'{folder_paths.output_directory}/extra_conds_kwargs.txt', 'w') as file:
+            file.write(f'extra_conds_kwargs{kwargs}')
 
         return out
 
@@ -281,6 +291,14 @@ class HunYuan(nn.Module):
         return resolutions, freqs_cis_img
 
     def forward(self, x, timesteps, context, y=None, **kwargs):
+        with open(f'{folder_paths.output_directory}/x.txt', 'w') as file:
+            file.write(f'x{x.shape}')
+        with open(f'{folder_paths.output_directory}/context.txt', 'w') as file:
+            file.write(f'context{context}')
+        with open(f'{folder_paths.output_directory}/y.txt', 'w') as file:
+            file.write(f'y{y}')
+        with open(f'{folder_paths.output_directory}/kwargs.txt', 'w') as file:
+            file.write(f'kwargs{kwargs}')
         #with torch.cuda.amp.autocast():
         context = context[:, 0]
 
@@ -293,10 +311,11 @@ class HunYuan(nn.Module):
 
         ## only return EPS
         out = out.to(torch.float16)
-        torch.save(out,f"{folder_paths.output_directory}/out.pt")
+        #torch.save(out,f"{folder_paths.output_directory}/out.pt")
         eps, rest = out[:, :self.in_channels], out[:, self.in_channels:]
-        torch.save(eps,f"{folder_paths.output_directory}/eps.pt")
-        return eps[0].unsqueeze(0)
+        #torch.save(eps,f"{folder_paths.output_directory}/eps.pt")
+        return eps[:x.shape[0]]
+        
 
     def forward_raw(self,
                 x,
@@ -340,19 +359,21 @@ class HunYuan(nn.Module):
             Whether to return a dictionary.
         """
         
-        clip_prompt_embeds=torch.load(f"{folder_paths.output_directory}/clip_prompt_embeds.pt").half()
-        clip_attention_mask=torch.load(f"{folder_paths.output_directory}/clip_attention_mask.pt").half()
-        clip_negative_prompt_embeds=torch.load(f"{folder_paths.output_directory}/clip_negative_prompt_embeds.pt").half()
-        clip_negative_attention_mask=torch.load(f"{folder_paths.output_directory}/clip_negative_attention_mask.pt").half()
-        mt5_prompt_embeds=torch.load(f"{folder_paths.output_directory}/mt5_prompt_embeds.pt").half()
-        mt5_attention_mask=torch.load(f"{folder_paths.output_directory}/mt5_attention_mask.pt").half()
-        mt5_negative_prompt_embeds=torch.load(f"{folder_paths.output_directory}/mt5_negative_prompt_embeds.pt").half()
-        mt5_negative_attention_mask=torch.load(f"{folder_paths.output_directory}/mt5_negative_attention_mask.pt").half()
+        ob, _, oh, ow = x.shape
+        batch_size=ob
+        clip_prompt_embeds=torch.load(f"{folder_paths.output_directory}/clip_prompt_embeds.pt").half().repeat(batch_size,1,1)    
+        clip_attention_mask=torch.load(f"{folder_paths.output_directory}/clip_attention_mask.pt").half().repeat(batch_size,1)    
+        clip_negative_prompt_embeds=torch.load(f"{folder_paths.output_directory}/clip_negative_prompt_embeds.pt").half().repeat(batch_size,1,1)    
+        clip_negative_attention_mask=torch.load(f"{folder_paths.output_directory}/clip_negative_attention_mask.pt").half().repeat(batch_size,1)    
+        mt5_prompt_embeds=torch.load(f"{folder_paths.output_directory}/mt5_prompt_embeds.pt").half().repeat(batch_size,1,1)    
+        mt5_attention_mask=torch.load(f"{folder_paths.output_directory}/mt5_attention_mask.pt").half().repeat(batch_size,1)    
+        mt5_negative_prompt_embeds=torch.load(f"{folder_paths.output_directory}/mt5_negative_prompt_embeds.pt").half().repeat(batch_size,1,1)    
+        mt5_negative_attention_mask=torch.load(f"{folder_paths.output_directory}/mt5_negative_attention_mask.pt").half().repeat(batch_size,1)    
 
         encoder_hidden_states=torch.cat((clip_prompt_embeds,clip_negative_prompt_embeds))
-        encoder_hidden_states_t5=torch.cat((mt5_prompt_embeds,mt5_negative_prompt_embeds))
-        text_embedding_mask=torch.cat((clip_attention_mask,clip_negative_attention_mask))
-        text_embedding_mask_t5=torch.cat((mt5_attention_mask,mt5_negative_attention_mask))
+        encoder_hidden_states_t5=torch.cat((mt5_prompt_embeds,mt5_negative_prompt_embeds))   
+        text_embedding_mask=torch.cat((clip_attention_mask,clip_negative_attention_mask))   
+        text_embedding_mask_t5=torch.cat((mt5_attention_mask,mt5_negative_attention_mask))  
 
 
         text_states = encoder_hidden_states                     # 2,77,1024
@@ -367,34 +388,42 @@ class HunYuan(nn.Module):
         clip_t5_mask = clip_t5_mask
         text_states = torch.where(clip_t5_mask.unsqueeze(2), text_states, self.text_embedding_padding.to(text_states))
 
-        _, _, oh, ow = x.shape
         th, tw = oh // self.patch_size, ow // self.patch_size
 
         # ========================= Build time and image embedding =========================
+        t=t.repeat(2)
+        x=x.repeat(2,1,1,1)
         t = self.t_embedder(t)
         x = self.x_embedder(x)
-        y = y.to(self.dtype)
+        with open(f'{folder_paths.output_directory}/x3.txt', 'w') as file:
+            file.write(f'x{x.shape}{x}')
+        #y = y.to(self.dtype)
 
         # Get image RoPE embedding according to `reso`lution.
         freqs_cis_img = (cos_cis_img, sin_cis_img)
 
         # ========================= Concatenate all extra vectors =========================
         # Build text tokens with pooling
+
         extra_vec = self.pooler(encoder_hidden_states_t5)
 
-        batch_size=1
-
-        target_height=1024
-        target_width=1024
+        height=oh*8
+        width=ow*8
+        target_height = int((height // 16) * 16)
+        target_width = int((width // 16) * 16)
 
         # Build image meta size tokens
-        size_cond = list((1024,1024)) + [1024, 1024, 0, 0]
+        size_cond = list((1024,1024)) + [target_width, target_height, 0, 0]
         image_meta_size = torch.as_tensor([size_cond] * 2 * batch_size, device=self.device)
+
+        with open(f'{folder_paths.output_directory}/image_meta_size.txt', 'w') as file:
+            file.write(f'image_meta_size{image_meta_size.shape}{image_meta_size}')
 
         image_meta_size = timestep_embedding(image_meta_size.view(-1), 256)   # [B * 6, 256]
         if self.use_fp16:
             image_meta_size = image_meta_size.half()
         image_meta_size = image_meta_size.view(-1, 6 * 256)
+        
         extra_vec = torch.cat([extra_vec, image_meta_size], dim=1)  # [B, D + 6 * 256]
 
         # Build style tokens
@@ -412,6 +441,10 @@ class HunYuan(nn.Module):
         else:
             freqs_cis_img = self.calc_rope(target_height, target_width)
 
+        with open(f'{folder_paths.output_directory}/t.txt', 'w') as file:
+            file.write(f't{t.shape}{t}')
+        with open(f'{folder_paths.output_directory}/extra_vec.txt', 'w') as file:
+            file.write(f'extra_vec{extra_vec.shape}{extra_vec}')
         c = t + self.extra_embedder(extra_vec)  # [B, D]
 
         # ========================= Forward pass through HunYuanDiT blocks =========================

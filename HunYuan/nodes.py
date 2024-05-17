@@ -113,7 +113,8 @@ class HunYuanDitCheckpointLoader:
 			"required": {
 				"HunyuanDiTfolder": (os.listdir(os.path.join(folder_paths.models_dir,"diffusers")), {"default": "HunyuanDiT"}),
 				"model": (list(dit_conf.keys()),),
-				"image_size": ([256, 512],),
+				"image_size_width": ("INT",{"default":768}),
+				"image_size_height": ("INT",{"default":1024}),
 				# "num_classes": ("INT", {"default": 1000, "min": 0,}),
 			}
 		}
@@ -123,11 +124,11 @@ class HunYuanDitCheckpointLoader:
 	CATEGORY = "ExtraModels/DiT"
 	TITLE = "HunYuanDitCheckpointLoader"
 
-	def load_checkpoint(self, HunyuanDiTfolder, model, image_size):
+	def load_checkpoint(self, HunyuanDiTfolder, model, image_size_width, image_size_height):
 		HunyuanDiTfolder=os.path.join(os.path.join(folder_paths.models_dir,"diffusers"),HunyuanDiTfolder)
 		ckpt_path=os.path.join(HunyuanDiTfolder,"t2i/model/pytorch_model_ema.pt")
 		model_conf = dit_conf[model]
-		model_conf["unet_config"]["input_size"]  = image_size // 8
+		model_conf["unet_config"]["input_size"]  = (image_size_height // 8, image_size_width // 8)
 		# model_conf["unet_config"]["num_classes"] = num_classes
 		dit = load_dit(
 			model_path = ckpt_path,
