@@ -1,80 +1,7 @@
 {
-  "last_node_id": 43,
-  "last_link_id": 74,
+  "last_node_id": 50,
+  "last_link_id": 88,
   "nodes": [
-    {
-      "id": 8,
-      "type": "VAEDecode",
-      "pos": [
-        1209,
-        188
-      ],
-      "size": {
-        "0": 210,
-        "1": 46
-      },
-      "flags": {},
-      "order": 6,
-      "mode": 0,
-      "inputs": [
-        {
-          "name": "samples",
-          "type": "LATENT",
-          "link": 7
-        },
-        {
-          "name": "vae",
-          "type": "VAE",
-          "link": 74
-        }
-      ],
-      "outputs": [
-        {
-          "name": "IMAGE",
-          "type": "IMAGE",
-          "links": [
-            9
-          ],
-          "slot_index": 0
-        }
-      ],
-      "properties": {
-        "Node name for S&R": "VAEDecode"
-      }
-    },
-    {
-      "id": 5,
-      "type": "EmptyLatentImage",
-      "pos": [
-        704,
-        651
-      ],
-      "size": {
-        "0": 315,
-        "1": 106
-      },
-      "flags": {},
-      "order": 0,
-      "mode": 0,
-      "outputs": [
-        {
-          "name": "LATENT",
-          "type": "LATENT",
-          "links": [
-            2
-          ],
-          "slot_index": 0
-        }
-      ],
-      "properties": {
-        "Node name for S&R": "EmptyLatentImage"
-      },
-      "widgets_values": [
-        1024,
-        1024,
-        1
-      ]
-    },
     {
       "id": 32,
       "type": "MT5Loader",
@@ -87,7 +14,7 @@
         "1": 122
       },
       "flags": {},
-      "order": 1,
+      "order": 0,
       "mode": 0,
       "outputs": [
         {
@@ -130,22 +57,40 @@
       "id": 35,
       "type": "HunYuanDitCheckpointLoader",
       "pos": [
-        403.9769933220757,
-        -0.806143792272735
+        430,
+        -221
       ],
       "size": {
         "0": 315,
-        "1": 106
+        "1": 130
       },
       "flags": {},
-      "order": 2,
+      "order": 6,
       "mode": 0,
+      "inputs": [
+        {
+          "name": "image_size_width",
+          "type": "INT",
+          "link": 78,
+          "widget": {
+            "name": "image_size_width"
+          }
+        },
+        {
+          "name": "image_size_height",
+          "type": "INT",
+          "link": 80,
+          "widget": {
+            "name": "image_size_height"
+          }
+        }
+      ],
       "outputs": [
         {
           "name": "model",
           "type": "MODEL",
           "links": [
-            67
+            77
           ],
           "shape": 3,
           "slot_index": 0
@@ -157,7 +102,159 @@
       "widgets_values": [
         "HunyuanDiT",
         "DiT-g/2",
-        256
+        1024,
+        768
+      ]
+    },
+    {
+      "id": 46,
+      "type": "PrimitiveNode",
+      "pos": [
+        17,
+        -217
+      ],
+      "size": {
+        "0": 210,
+        "1": 82
+      },
+      "flags": {},
+      "order": 1,
+      "mode": 0,
+      "outputs": [
+        {
+          "name": "INT",
+          "type": "INT",
+          "links": [
+            78,
+            83
+          ],
+          "slot_index": 0,
+          "widget": {
+            "name": "image_size_width"
+          }
+        }
+      ],
+      "properties": {
+        "Run widget replace on values": false
+      },
+      "widgets_values": [
+        1024,
+        "fixed"
+      ]
+    },
+    {
+      "id": 47,
+      "type": "PrimitiveNode",
+      "pos": [
+        16,
+        -59
+      ],
+      "size": {
+        "0": 210,
+        "1": 82
+      },
+      "flags": {},
+      "order": 2,
+      "mode": 0,
+      "outputs": [
+        {
+          "name": "INT",
+          "type": "INT",
+          "links": [
+            80,
+            82
+          ],
+          "slot_index": 0,
+          "widget": {
+            "name": "image_size_height"
+          }
+        }
+      ],
+      "properties": {
+        "Run widget replace on values": false
+      },
+      "widgets_values": [
+        768,
+        "fixed"
+      ]
+    },
+    {
+      "id": 8,
+      "type": "VAEDecode",
+      "pos": [
+        1223,
+        195
+      ],
+      "size": {
+        "0": 210,
+        "1": 46
+      },
+      "flags": {},
+      "order": 10,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "samples",
+          "type": "LATENT",
+          "link": 7
+        },
+        {
+          "name": "vae",
+          "type": "VAE",
+          "link": 74
+        }
+      ],
+      "outputs": [
+        {
+          "name": "IMAGE",
+          "type": "IMAGE",
+          "links": [
+            84
+          ],
+          "slot_index": 0
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "VAEDecode"
+      }
+    },
+    {
+      "id": 49,
+      "type": "LoadImage",
+      "pos": [
+        796.3945147047091,
+        571.7084114574003
+      ],
+      "size": {
+        "0": 315,
+        "1": 314.0000305175781
+      },
+      "flags": {},
+      "order": 3,
+      "mode": 0,
+      "outputs": [
+        {
+          "name": "IMAGE",
+          "type": "IMAGE",
+          "links": [
+            85
+          ],
+          "shape": 3,
+          "slot_index": 0
+        },
+        {
+          "name": "MASK",
+          "type": "MASK",
+          "links": null,
+          "shape": 3
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "LoadImage"
+      },
+      "widgets_values": [
+        "ComfyUI_00061_.png",
+        "image"
       ]
     },
     {
@@ -172,14 +269,15 @@
         "1": 58
       },
       "flags": {},
-      "order": 3,
+      "order": 4,
       "mode": 0,
       "outputs": [
         {
           "name": "VAE",
           "type": "VAE",
           "links": [
-            74
+            74,
+            86
           ],
           "shape": 3,
           "slot_index": 0
@@ -193,24 +291,88 @@
       ]
     },
     {
+      "id": 50,
+      "type": "VAEEncode",
+      "pos": [
+        1251.4522304568147,
+        481.7803521272774
+      ],
+      "size": {
+        "0": 210,
+        "1": 46
+      },
+      "flags": {},
+      "order": 8,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "pixels",
+          "type": "IMAGE",
+          "link": 85
+        },
+        {
+          "name": "vae",
+          "type": "VAE",
+          "link": 86
+        }
+      ],
+      "outputs": [
+        {
+          "name": "LATENT",
+          "type": "LATENT",
+          "links": [],
+          "shape": 3,
+          "slot_index": 0
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "VAEEncode"
+      }
+    },
+    {
+      "id": 48,
+      "type": "PreviewImage",
+      "pos": [
+        1648,
+        193
+      ],
+      "size": {
+        "0": 210,
+        "1": 246
+      },
+      "flags": {},
+      "order": 11,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "images",
+          "type": "IMAGE",
+          "link": 84
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "PreviewImage"
+      }
+    },
+    {
       "id": 3,
       "type": "KSampler",
       "pos": [
-        863,
-        186
+        858,
+        182
       ],
       "size": {
         "0": 315,
         "1": 262
       },
       "flags": {},
-      "order": 5,
+      "order": 9,
       "mode": 0,
       "inputs": [
         {
           "name": "model",
           "type": "MODEL",
-          "link": 67
+          "link": 77
         },
         {
           "name": "positive",
@@ -225,7 +387,7 @@
         {
           "name": "latent_image",
           "type": "LATENT",
-          "link": 2
+          "link": 88
         }
       ],
       "outputs": [
@@ -242,39 +404,13 @@
         "Node name for S&R": "KSampler"
       },
       "widgets_values": [
-        24,
+        50,
         "fixed",
         20,
         6,
         "ddim",
         "ddim_uniform",
         1
-      ]
-    },
-    {
-      "id": 9,
-      "type": "SaveImage",
-      "pos": [
-        1451,
-        189
-      ],
-      "size": {
-        "0": 210,
-        "1": 270
-      },
-      "flags": {},
-      "order": 7,
-      "mode": 0,
-      "inputs": [
-        {
-          "name": "images",
-          "type": "IMAGE",
-          "link": 9
-        }
-      ],
-      "properties": {},
-      "widgets_values": [
-        "ComfyUI"
       ]
     },
     {
@@ -289,7 +425,7 @@
         "1": 200
       },
       "flags": {},
-      "order": 4,
+      "order": 5,
       "mode": 0,
       "inputs": [
         {
@@ -332,20 +468,63 @@
         "Node name for S&R": "MT5TextEncode"
       },
       "widgets_values": [
-        "一张细致的照片捕捉到了一尊雕像的形象，这尊雕像酷似一位古代法老，头上出人意料地戴着一副青铜蒸汽朋克护目镜。\n这座雕像穿着复古时髦，一件清爽的白色T恤和一件合身的黑色皮夹克，与传统的头饰形成鲜明对比。\n背景是简单的纯色，突出了雕像的非传统服装和蒸汽朋克眼镜的复杂细节。",
+        "一位年轻女子站在春季的火车站月台上。\n她身着蓝灰色长风衣，白色衬衫。她的深棕色头发扎成低马尾，几缕碎发随风飘扬。\n她的眼神充满期待，阳光洒在她温暖的脸庞上。",
         "错误的眼睛，糟糕的人脸，毁容，糟糕的艺术，变形，多余的肢体，模糊的颜色，模糊，重复，病态，残缺，"
+      ]
+    },
+    {
+      "id": 5,
+      "type": "EmptyLatentImage",
+      "pos": [
+        427,
+        -31
+      ],
+      "size": {
+        "0": 315,
+        "1": 106
+      },
+      "flags": {},
+      "order": 7,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "width",
+          "type": "INT",
+          "link": 83,
+          "widget": {
+            "name": "width"
+          }
+        },
+        {
+          "name": "height",
+          "type": "INT",
+          "link": 82,
+          "widget": {
+            "name": "height"
+          }
+        }
+      ],
+      "outputs": [
+        {
+          "name": "LATENT",
+          "type": "LATENT",
+          "links": [
+            88
+          ],
+          "slot_index": 0
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "EmptyLatentImage"
+      },
+      "widgets_values": [
+        1024,
+        768,
+        2
       ]
     }
   ],
   "links": [
-    [
-      2,
-      5,
-      0,
-      3,
-      3,
-      "LATENT"
-    ],
     [
       7,
       3,
@@ -353,14 +532,6 @@
       8,
       0,
       "LATENT"
-    ],
-    [
-      9,
-      8,
-      0,
-      9,
-      0,
-      "IMAGE"
     ],
     [
       58,
@@ -403,7 +574,15 @@
       "CONDITIONING"
     ],
     [
-      67,
+      74,
+      22,
+      0,
+      8,
+      1,
+      "VAE"
+    ],
+    [
+      77,
       35,
       0,
       3,
@@ -411,22 +590,78 @@
       "MODEL"
     ],
     [
-      74,
+      78,
+      46,
+      0,
+      35,
+      0,
+      "INT"
+    ],
+    [
+      80,
+      47,
+      0,
+      35,
+      1,
+      "INT"
+    ],
+    [
+      82,
+      47,
+      0,
+      5,
+      1,
+      "INT"
+    ],
+    [
+      83,
+      46,
+      0,
+      5,
+      0,
+      "INT"
+    ],
+    [
+      84,
+      8,
+      0,
+      48,
+      0,
+      "IMAGE"
+    ],
+    [
+      85,
+      49,
+      0,
+      50,
+      0,
+      "IMAGE"
+    ],
+    [
+      86,
       22,
       0,
-      8,
+      50,
       1,
       "VAE"
+    ],
+    [
+      88,
+      5,
+      0,
+      3,
+      3,
+      "LATENT"
     ]
   ],
   "groups": [],
   "config": {},
   "extra": {
     "ds": {
-      "scale": 0.8390545288824085,
+      "scale": 0.6303940863128614,
       "offset": [
-        306.6651968791855,
-        134.08107065068282
+        565.5430225631707,
+        449.5915559841989
       ]
     }
   },
