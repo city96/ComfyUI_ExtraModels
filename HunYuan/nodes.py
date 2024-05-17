@@ -125,6 +125,8 @@ class HunYuanDitCheckpointLoader:
 	TITLE = "HunYuanDitCheckpointLoader"
 
 	def load_checkpoint(self, HunyuanDiTfolder, model, image_size_width, image_size_height):
+		image_size_width = int((image_size_width // 16) * 16)
+		image_size_height = int((image_size_height // 16) * 16)
 		HunyuanDiTfolder=os.path.join(os.path.join(folder_paths.models_dir,"diffusers"),HunyuanDiTfolder)
 		ckpt_path=os.path.join(HunyuanDiTfolder,"t2i/model/pytorch_model_ema.pt")
 		model_conf = dit_conf[model]
