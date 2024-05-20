@@ -79,32 +79,14 @@ class MT5TextEncode:
 	def encode(self, embedder_t5, clip_text_encoder, tokenizer, prompt, negative_prompt):
 		print(f'prompt{prompt}')
 		clip_prompt_embeds,clip_attention_mask = clip_get_text_embeddings(clip_text_encoder,tokenizer,prompt,embedder_t5.device)
-		#clip_prompt_embeds=clip_prompt_embeds[0].permute(1,0)
-		#clip_prompt_embeds=torch.cat((clip_prompt_embeds,clip_attention_mask))
-		#print(f'clip_prompt_embeds{clip_prompt_embeds}')
 
 		clip_negative_prompt_embeds,clip_negative_attention_mask = clip_get_text_embeddings(clip_text_encoder,tokenizer,negative_prompt,embedder_t5.device)
-		#clip_negative_prompt_embeds=clip_negative_prompt_embeds[0].permute(1,0)
-		#clip_negative_prompt_embeds=torch.cat((clip_negative_prompt_embeds,clip_negative_attention_mask))
 
 		mt5_prompt_embeds,mt5_attention_mask = embedder_t5.get_text_embeddings(prompt)
-		#mt5_prompt_embeds=mt5_prompt_embeds[0].permute(1,0)
-		#mt5_prompt_embeds=torch.cat((mt5_prompt_embeds,mt5_attention_mask))
 
 		mt5_negative_prompt_embeds,mt5_negative_attention_mask = embedder_t5.get_text_embeddings(negative_prompt)
-		#mt5_negative_prompt_embeds=mt5_negative_prompt_embeds[0].permute(1,0)
-		#mt5_negative_prompt_embeds=torch.cat((mt5_negative_prompt_embeds,mt5_negative_attention_mask))
-		
-		torch.save(clip_prompt_embeds,f"{folder_paths.output_directory}/clip_prompt_embeds.pt")
-		torch.save(clip_attention_mask,f"{folder_paths.output_directory}/clip_attention_mask.pt")
-		torch.save(clip_negative_prompt_embeds,f"{folder_paths.output_directory}/clip_negative_prompt_embeds.pt")
-		torch.save(clip_negative_attention_mask,f"{folder_paths.output_directory}/clip_negative_attention_mask.pt")
-		torch.save(mt5_prompt_embeds,f"{folder_paths.output_directory}/mt5_prompt_embeds.pt")
-		torch.save(mt5_attention_mask,f"{folder_paths.output_directory}/mt5_attention_mask.pt")
-		torch.save(mt5_negative_prompt_embeds,f"{folder_paths.output_directory}/mt5_negative_prompt_embeds.pt")
-		torch.save(mt5_negative_attention_mask,f"{folder_paths.output_directory}/mt5_negative_attention_mask.pt")
 
-		return ([[clip_prompt_embeds, {"clip_attention_mask":clip_attention_mask}]],[[clip_negative_prompt_embeds, {"clip_attention_mask":clip_negative_attention_mask}]], )
+		return ([[clip_prompt_embeds, {"clip_prompt_embeds":clip_prompt_embeds,"clip_attention_mask":clip_attention_mask,"mt5_prompt_embeds":mt5_prompt_embeds,"mt5_attention_mask":mt5_attention_mask}]],[[clip_negative_prompt_embeds, {"clip_prompt_embeds":clip_negative_prompt_embeds,"clip_attention_mask":clip_negative_attention_mask,"mt5_prompt_embeds":mt5_negative_prompt_embeds,"mt5_attention_mask":mt5_negative_attention_mask}]], )
 
 class HunYuanDitCheckpointLoader:
 	@classmethod
@@ -113,7 +95,7 @@ class HunYuanDitCheckpointLoader:
 			"required": {
 				"HunyuanDiTfolder": (os.listdir(os.path.join(folder_paths.models_dir,"diffusers")), {"default": "HunyuanDiT"}),
 				"model": (list(dit_conf.keys()),),
-				"image_size_width": ("INT",{"default":768}),
+				"image_size_width": ("INT",{"default":1024}),
 				"image_size_height": ("INT",{"default":1024}),
 				# "num_classes": ("INT", {"default": 1000, "min": 0,}),
 			}
