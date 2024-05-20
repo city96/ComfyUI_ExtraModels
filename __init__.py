@@ -22,6 +22,10 @@ else:
 	from .T5.nodes import NODE_CLASS_MAPPINGS as T5_Nodes
 	NODE_CLASS_MAPPINGS.update(T5_Nodes)
 
+	# HYDiT
+	from .HunYuanDiT.nodes import NODE_CLASS_MAPPINGS as HunYuanDiT_Nodes
+	NODE_CLASS_MAPPINGS.update(HunYuanDiT_Nodes)
+
 	# VAE
 	from .VAE.nodes import NODE_CLASS_MAPPINGS as VAE_Nodes
 	NODE_CLASS_MAPPINGS.update(VAE_Nodes)
