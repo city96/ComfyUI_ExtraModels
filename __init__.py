@@ -30,7 +30,7 @@ else:
 	from .VAE.nodes import NODE_CLASS_MAPPINGS as VAE_Nodes
 	NODE_CLASS_MAPPINGS.update(VAE_Nodes)
  
- 	# VAE
+ 	# MiaoBi
 	from .MiaoBi.nodes import NODE_CLASS_MAPPINGS as MiaoBi_Nodes
 	NODE_CLASS_MAPPINGS.update(MiaoBi_Nodes)
 
