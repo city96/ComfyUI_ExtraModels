@@ -173,12 +173,17 @@ On windows, you may need a newer version of bitsandbytes for 4bit. Try `python -
 > You may also need to upgrade transformers and install spiece for the tokenizer. `pip install -r requirements.txt`
 
 ## MiaoBi
+
 ### Original from: 
+
 - Author: Github [ShineChen1024](https://github.com/ShineChen1024) | Hugging Face [ShineChen1024](https://huggingface.co/ShineChen1024)
 - https://github.com/ShineChen1024/MiaoBi
 - https://huggingface.co/ShineChen1024/MiaoBi
+
 ### Instructions
-- Download the [clip model](https://huggingface.co/ShineChen1024/MiaoBi/blob/main/miaobi_beta0.9/text_encoder/model.safetensors) and rename it to "MiaoBi_CLIP.safetensors" or any you like, then place it in **ComfyUI/models/clip**.
+- Download the [clip model](https://huggingface.co/ShineChen1024/MiaoBi/blob/main/miaobi_beta0.9/text_encoder/model.safetensors) and rename it to "MiaoBi_CLIP.safetensors" or any you like, then place it in `ComfyUI/models/clip`.
+- Download the [unet model](https://huggingface.co/ShineChen1024/MiaoBi/blob/main/miaobi_beta0.9/unet/diffusion_pytorch_model.safetensors) and rename it to "MiaoBi.safetensors", then place it in `ComfyUI/models/unet`.
+- Alternatively, clone/download the entire huggingface repo to `ComfyUI/models/diffusers` and use the MiaoBi diffusers loader.
 
 这是妙笔的测试版本。妙笔，一个中文文生图模型，与经典的stable-diffusion 1.5版本拥有一致的结构，兼容现有的lora，controlnet，T2I-Adapter等主流插件及其权重。
 
