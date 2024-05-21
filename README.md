@@ -150,8 +150,7 @@ The initial work on this was done by [chaojie](https://github.com/chaojie) in [t
 ConditioningCombine nodes *should* work for combining multiple labels. The area ones don't since the model currently can't handle dynamic input dimensions.
 
 [Sample workflow here](https://github.com/city96/ComfyUI_ExtraModels/files/13619259/DiTV2.json)
-
-![](./Dit/Dit.jpg)
+![](./DiT/Dit.jpg)
 
 
 
