@@ -172,6 +172,30 @@ On windows, you may need a newer version of bitsandbytes for 4bit. Try `python -
 > [!IMPORTANT]  
 > You may also need to upgrade transformers and install spiece for the tokenizer. `pip install -r requirements.txt`
 
+## MiaoBi
+### Original from: 
+- Author: Github [ShineChen1024](https://github.com/ShineChen1024) | Hugging Face [ShineChen1024](https://huggingface.co/ShineChen1024)
+- https://github.com/ShineChen1024/MiaoBi
+- https://huggingface.co/ShineChen1024/MiaoBi
+### Instructions
+- Download the [clip model](https://huggingface.co/ShineChen1024/MiaoBi/blob/main/miaobi_beta0.9/text_encoder/model.safetensors) and rename it to "MiaoBi_CLIP.safetensors" or any you like, then place it in **ComfyUI/models/clip**.
+
+这是妙笔的测试版本。妙笔，一个中文文生图模型，与经典的stable-diffusion 1.5版本拥有一致的结构，兼容现有的lora，controlnet，T2I-Adapter等主流插件及其权重。
+
+This is the beta version of MiaoBi, a chinese text-to-image model, following the classical structure of sd-v1.5, compatible with existing mainstream plugins such as Lora, Controlnet, T2I Adapter, etc.
+
+Example Prompts:
+- 一只精致的陶瓷猫咪雕像，全身绘有精美的传统花纹，眼睛仿佛会发光。
+- 动漫风格的风景画，有山脉、湖泊，也有繁华的小镇子，色彩鲜艳，光影效果明显。
+- 极具真实感的复杂农村的老人肖像，黑白。
+- 红烧狮子头
+- 车水马龙的上海街道，春节，舞龙舞狮。
+- 枯藤老树昏鸦，小桥流水人家。水墨画。
+
+[Example Workflow](https://github.com/city96/ComfyUI_ExtraModels/files/15389380/MiaoBiV1.json)
+
+[Example Workflow (diffusers)](https://github.com/city96/ComfyUI_ExtraModels/files/15389381/MiaoBiV1D.json)
+
 
 
 ## VAE
