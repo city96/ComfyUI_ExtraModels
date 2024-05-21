@@ -209,7 +209,7 @@ Example Prompts:
 - 红烧狮子头
 - 车水马龙的上海街道，春节，舞龙舞狮。
 - 枯藤老树昏鸦，小桥流水人家。水墨画。
-- **workflow**
+- **You can drag it into ComfyUI, it's a png with workflow**
 ![](./MiaoBi/MiaoBi.png)
 
 **Limitations**
