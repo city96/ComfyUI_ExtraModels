@@ -268,5 +268,4 @@ save_file(vae, "svd_xt_vae.safetensors")
 `vq-f4/8/16` from the taming transformers repo, weights for both vq and kl models available [here](https://ommer-lab.com/files/latent-diffusion/)
 
 `vq-f8` can accepts latents from the SD unet but just like xl with v1 latents, output largely garbage. The rest are completely useless without a matching UNET that uses the correct channel count.
-
-![](./vae/vae.jpg)
+![](./VAE/vae.jpg)
