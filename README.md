@@ -195,6 +195,7 @@ Example Prompts:
 [Example Workflow](https://github.com/city96/ComfyUI_ExtraModels/files/15389380/MiaoBiV1.json)
 
 [Example Workflow (diffusers)](https://github.com/city96/ComfyUI_ExtraModels/files/15389381/MiaoBiV1D.json)
+![example](https://github.com/zmwv823/ComfyUI_ExtraModels/assets/13308350/e794132b-18a1-4258-a674-18714994ee67)
 
 
 
