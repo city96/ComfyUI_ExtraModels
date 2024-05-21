@@ -1,9 +1,25 @@
 # Extra Models for ComfyUI
-
 This repository aims to add support for various different image diffusion models to ComfyUI.
+## Abstract
+- 📜[Installation](#installation)
+  - 📜[Standalone ComfyUI](#standalone-comfyui)
+- 📜[PixArt](#pixart)
+  - 🛠[PixArt Usage](#pixart-usage)
+- 📜[PixArt Sigma](#pixart-sigma)
+- 📜[PixArt LCM](#pixart-lcm)
+- 📜[HunYuan DiT](#hunyuan-dit)
+  - 🛠[Instructions](#instructions)
+- 📜[Dit](#dit)
+  - 🛠[Dit Usage](#dit-usage)
+- 📜[T5](#t5)
+  - 🛠[T5 Usage](#t5-usage)
+- 📜[MiaoBi](#miaobi)
+- 📜[VAE](#vae)
+  - 📜[Consistency Decoder](#consistency-decoder)
+  - 📜[Deflickering Decoder & VideoDecoder](#deflickering-decoder-and-videodecoder)
+  - 📜[AutoencoderKL & VQModel](#autoencoderkl-and-vqmodel)
 
 ## Installation
-
 Simply clone this repo to your custom_nodes folder using the following command:
 
 `git clone https://github.com/city96/ComfyUI_ExtraModels custom_nodes/ComfyUI_ExtraModels`
@@ -11,7 +27,6 @@ Simply clone this repo to your custom_nodes folder using the following command:
 You will also have to install the requirements from the provided file by running `pip install -r requirements.txt` inside your VENV/conda env. If you downloaded the standalone version of ComfyUI, then follow the steps below.
 
 ### Standalone ComfyUI
-
 I haven't tested this completely, so if you know what you're doing, use the regular venv/`git clone` install option when installing ComfyUI.
 
 Go to the where you unpacked `ComfyUI_windows_portable` to (where your run_nvidia_gpu.bat file is) and open a command line window. Press `CTRL+SHIFT+Right click` in an empty space and click "Open PowerShell window here".
@@ -35,9 +50,8 @@ git pull
 
 Alternatively, use the manager, assuming it has an update function.
 
-
-
 ## PixArt
+- [Abstract](#abstract)
 
 [Original Repo](https://github.com/PixArt-alpha/PixArt-alpha)
 
@@ -47,8 +61,7 @@ Alternatively, use the manager, assuming it has an update function.
 - Same latent space as SD1.5 (works with the SD1.5 VAE)
 - Attention needs optimization, images look worse without xformers.
 
-### Usage
-
+### PixArt Usage
 1. Download the model weights from the [PixArt alpha repo](https://huggingface.co/PixArt-alpha/PixArt-alpha/tree/main) - you most likely want the 1024px one - `PixArt-XL-2-1024-MS.pth`
 2. Place them in your checkpoints folder
 3. Load them with the correct PixArt checkpoint loader
@@ -68,9 +81,10 @@ Limitations:
 
 [Sample workflow here](https://github.com/city96/ComfyUI_ExtraModels/files/13617463/PixArtV3.json)
 
-![PixArtT12](https://github.com/city96/ComfyUI_ExtraModels/assets/125218114/eb1a02f9-6114-47eb-a066-261c39c55615)
+![](./PixArt/PixArt.jpg)
 
 ### PixArt Sigma
+- [Abstract](#abstract)
 
 The Sigma models work just like the normal ones. Out of the released checkpoints, the 512, 1024 and 2K one are supported.
 
@@ -80,6 +94,7 @@ You can find the [1024 checkpoint here](https://huggingface.co/PixArt-alpha/PixA
 > Make sure to select an SDXL VAE for PixArt Sigma!
 
 ### PixArt LCM
+- [Abstract](#abstract)
 
 The LCM model also works if you're on the latest version. To use it:
 
@@ -89,11 +104,12 @@ The LCM model also works if you're on the latest version. To use it:
 
 Everything else can be the same the same as in the example above.
 
-![PixArtLCM](https://github.com/city96/ComfyUI_ExtraModels/assets/125218114/558f8b30-449b-4973-ad7e-6aa69832adcb)
+![](./PixArt/PixArtLCM.jpg)
 
 
 
 ## HunYuan DiT
+- [Abstract](#abstract)
 
 WIP implementation of [HunYuan DiT by Tencent](https://github.com/Tencent/HunyuanDiT)
 
@@ -104,17 +120,18 @@ WIP implementation of [HunYuan DiT by Tencent](https://github.com/Tencent/Hunyua
 
 The initial work on this was done by [chaojie](https://github.com/chaojie) in [this PR](https://github.com/city96/ComfyUI_ExtraModels/pull/37).
 
-Instructions:
+### Instructions
 - Download the [first text encoder from here](https://huggingface.co/Tencent-Hunyuan/HunyuanDiT/blob/main/t2i/clip_text_encoder/pytorch_model.bin) and place it in `ComfyUI/models/clip` - rename to "chinese-roberta-wwm-ext-large.bin"
 - Download the [second text encoder from here](https://huggingface.co/Tencent-Hunyuan/HunyuanDiT/blob/main/t2i/mt5/pytorch_model.bin) and place it in `ComfyUI/models/T5` - rename it to "mT5.bin"
 - Download the [model file from here](https://huggingface.co/Tencent-Hunyuan/HunyuanDiT/blob/main/t2i/model/pytorch_model_module.pt) and place it in `ComfyUI/checkpoints` - rename it to "HunYuanDiT.pt"
 - Download/use any SDXL VAE, for example [this one](https://huggingface.co/madebyollin/sdxl-vae-fp16-fix)
 
-![image](https://github.com/city96/ComfyUI_ExtraModels/assets/125218114/7a9d6e34-d3f4-4f67-a17f-4f2d6795e54e)
+![](./HunYuanDiT/HunYuanDiT.jpg)
 
 
 
 ## DiT
+- [Abstract](#abstract)
 
 [Original Repo](https://github.com/facebookresearch/DiT)
 
@@ -124,8 +141,7 @@ Instructions:
 - Same latent space as SD1.5 (works with the SD1.5 VAE)
 - Works in FP16, but no other optimization
 
-### Usage
-
+### Dit Usage
 1. Download the original model weights from the [DiT Repo](https://github.com/facebookresearch/DiT) or the converted [FP16 safetensor ones from Huggingface](https://huggingface.co/city96/DiT/tree/main).
 2. Place them in your checkpoints folder. (You may need to move them if you had them in `ComfyUI\models\dit` before)
 3. Load the model and select the class labels as shown in the image below
@@ -134,12 +150,12 @@ Instructions:
 ConditioningCombine nodes *should* work for combining multiple labels. The area ones don't since the model currently can't handle dynamic input dimensions.
 
 [Sample workflow here](https://github.com/city96/ComfyUI_ExtraModels/files/13619259/DiTV2.json)
-
-![DIT_WORKFLOW_IMG](https://github.com/city96/ComfyUI_ExtraModels/assets/125218114/cdd4ec94-b0eb-436a-bf23-a3bcef8d7b90)
+![](./DiT/Dit.jpg)
 
 
 
 ## T5
+- [Abstract](#abstract)
 
 ### T5v11
 
@@ -159,8 +175,7 @@ For faster loading/smaller file sizes, you may pick one of the following alterna
 
 To move T5 to a different drive/folder, do the same as you would when moving checkpoints, but add `    t5: t5` to `extra_model_paths.yaml` and create a directory called "t5" in the alternate path specified in the `base_path` variable.
 
-### Usage
-
+### T5 Usage
 Loaded onto the CPU, it'll use about 22GBs of system RAM. Depending on which weights you use, it might use slightly more during loading.
 
 If you have a second GPU, selecting "cuda:1" as the device will allow you to use it for T5, freeing at least some VRAM/System RAM. Using FP16 as the dtype is recommended.
@@ -172,9 +187,46 @@ On windows, you may need a newer version of bitsandbytes for 4bit. Try `python -
 > [!IMPORTANT]  
 > You may also need to upgrade transformers and install spiece for the tokenizer. `pip install -r requirements.txt`
 
+## MiaoBi
+- [Abstract](#abstract)
 
+### Original from: 
+- Author: Github [ShineChen1024](https://github.com/ShineChen1024) | Hugging Face [ShineChen1024](https://huggingface.co/ShineChen1024)
+- https://github.com/ShineChen1024/MiaoBi
+- https://huggingface.co/ShineChen1024/MiaoBi
+### Instructions
+- Download the [clip model](https://huggingface.co/ShineChen1024/MiaoBi/blob/main/miaobi_beta0.9/text_encoder/model.safetensors) and rename it to "MiaoBi_CLIP.safetensors" or any you like, then place it in **ComfyUI/models/clip**.
 
+这是妙笔的测试版本。妙笔，一个中文文生图模型，与经典的stable-diffusion 1.5版本拥有一致的结构，兼容现有的lora，controlnet，T2I-Adapter等主流插件及其权重。
+
+This is the beta version of MiaoBi, a chinese text-to-image model, following the classical structure of sd-v1.5, compatible with existing mainstream plugins such as Lora, Controlnet, T2I Adapter, etc.
+
+Example Prompts:
+- 一只精致的陶瓷猫咪雕像，全身绘有精美的传统花纹，眼睛仿佛会发光。
+- 动漫风格的风景画，有山脉、湖泊，也有繁华的小镇子，色彩鲜艳，光影效果明显。
+- 极具真实感的复杂农村的老人肖像，黑白。
+- 红烧狮子头
+- 车水马龙的上海街道，春节，舞龙舞狮。
+- 枯藤老树昏鸦，小桥流水人家。水墨画。
+- **You can drag it into ComfyUI, it's a png with workflow**
+![](./MiaoBi/MiaoBi.png)
+
+**Limitations**
+
+妙笔的训练数据包含Laion-5B中的中文子集（经过清洗过滤），Midjourney相关的开源
+数据（将英文提示词翻译成中文），以及我们收集的一批数十万的caption数据。由于整
+个数据集大量缺少成语与古诗词数据，所以对成语与古诗词的理解可能存在偏差，对中
+国的名胜地标建筑数据的缺少以及大量的英译中数据，可能会导致出现一些对象的混乱
+，如果有以上较高数据质量的伙伴，希望能完善该项目，请与我们联系，我们将根据提
+供的数据训练全新的版本。妙笔Beta0.9在8张4090显卡上完成训练，我们正在拓展我们
+的机器资源来训练SDXL来获得更优的结果，敬请期待。
+
+Due to limitations in computing power and the size of Chinese datasets, the 
+performance of Miaobi may be inferior to commercial models at this stage. We
+ are expanding our computing resources and collecting larger scale data, 
+looking forward to the future performance of Miaobi.
 ## VAE
+- [Abstract](#abstract)
 
 A few custom VAE models are supported. The option to select a different dtype when loading is also possible, which can be useful for testing/comparisons. You can load the models listed below using the "ExtraVAELoader" node.
 
@@ -183,7 +235,6 @@ A few custom VAE models are supported. The option to select a different dtype wh
 - [VAE for SDXL and PixArt sigma](https://huggingface.co/madebyollin/sdxl-vae-fp16-fix/blob/main/diffusion_pytorch_model.safetensors)
 
 ### Consistency Decoder
-
 [Original Repo](https://github.com/openai/consistencydecoder)
 
 This now works thanks to the work of @mrsteyk and @madebyollin - [Gist with more info](https://gist.github.com/madebyollin/865fa6a18d9099351ddbdfbe7299ccbf).
@@ -194,8 +245,7 @@ This now works thanks to the work of @mrsteyk and @madebyollin - [Gist with more
 - Set it to fp16 or bf16 to not run out of VRAM
 - Use tiled VAE decode if required
 
-### Deflickering Decoder / VideoDecoder
-
+### Deflickering Decoder and VideoDecoder
 This is the VAE that comes baked into the [Stable Video Diffusion](https://stability.ai/news/stable-video-diffusion-open-ai-video-model) model.
 
 It doesn't seem particularly good as a normal VAE (color issues, pretty bad with finer details).
@@ -211,12 +261,10 @@ vae = {k.replace(pf, ''):v for k,v in sd.items() if k.startswith(pf)}
 save_file(vae, "svd_xt_vae.safetensors")
 ```
 
-### AutoencoderKL / VQModel
-
+### AutoencoderKL and VQModel
 `kl-f4/8/16/32` from the [compvis/latent diffusion repo](https://github.com/CompVis/latent-diffusion/tree/main#pretrained-autoencoding-models).
 
 `vq-f4/8/16` from the taming transformers repo, weights for both vq and kl models available [here](https://ommer-lab.com/files/latent-diffusion/)
 
 `vq-f8` can accepts latents from the SD unet but just like xl with v1 latents, output largely garbage. The rest are completely useless without a matching UNET that uses the correct channel count.
-
-![VAE_TEST](https://github.com/city96/ComfyUI_ExtraModels/assets/125218114/316c7029-ee78-4ff7-a46a-b56ef91477eb)
+![](./VAE/vae.jpg)
