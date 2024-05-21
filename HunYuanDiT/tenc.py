@@ -4,6 +4,7 @@ import torch
 from transformers import AutoTokenizer, modeling_utils
 from transformers import T5Config, T5EncoderModel, BertConfig, BertModel
 
+from comfy import model_management
 import comfy.model_patcher
 import comfy.utils
 
