@@ -103,17 +103,26 @@ class EXM_HyDiT_Tenc_Temp:
 				device         = self.load_device,
 				dtype          = self.dtype,
 			)
-			tokenizer_args = {"subfolder": "t2i/mt5"}
+			tokenizer_args = {"subfolder": "t2i/mt5"} # web
+			tokenizer_path = os.path.join( # local
+				os.path.dirname(os.path.realpath(__file__)),
+				"mt5_tokenizer",
+			)
 		else:
 			self.cond_stage_model = hyCLIPModel(
 				device         = self.load_device,
 				dtype          = self.dtype,
 			)
-			tokenizer_args = {"subfolder": "t2i/tokenizer",}
-		self.tokenizer = AutoTokenizer.from_pretrained(
-			"Tencent-Hunyuan/HunyuanDiT",
-			**tokenizer_args
-		)
+			tokenizer_args = {"subfolder": "t2i/tokenizer",} # web
+			tokenizer_path = os.path.join( # local
+				os.path.dirname(os.path.realpath(__file__)),
+				"tokenizer",
+			)
+		# self.tokenizer = AutoTokenizer.from_pretrained(
+			# "Tencent-Hunyuan/HunyuanDiT",
+			# **tokenizer_args
+		# )
+		self.tokenizer = AutoTokenizer.from_pretrained(tokenizer_path)
 		self.patcher = comfy.model_patcher.ModelPatcher(
 			self.cond_stage_model,
 			load_device    = self.load_device,
