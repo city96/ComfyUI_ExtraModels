@@ -213,7 +213,7 @@ def get_2d_sincos_pos_embed(embed_dim, grid_size, cls_token=False, extra_tokens=
     pos_embed = get_2d_sincos_pos_embed_from_grid(embed_dim, grid)
     if cls_token and extra_tokens > 0:
         pos_embed = np.concatenate([np.zeros([extra_tokens, embed_dim]), pos_embed], axis=0)
-    return pos_embed
+    return pos_embed.astype(np.float32)
 
 
 def get_2d_sincos_pos_embed_from_grid(embed_dim, grid):
