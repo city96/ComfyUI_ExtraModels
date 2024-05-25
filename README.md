@@ -97,11 +97,6 @@ Everything else can be the same the same as in the example above.
 
 WIP implementation of [HunYuan DiT by Tencent](https://github.com/Tencent/HunyuanDiT)
 
-> [!WARNING]
-> Only a proof of concept, most things don't work yet and only 1024x1024 is supported.
-> 
-> The text encoder device/dtype selection also doesn't work.
-
 The initial work on this was done by [chaojie](https://github.com/chaojie) in [this PR](https://github.com/city96/ComfyUI_ExtraModels/pull/37).
 
 Instructions:
@@ -109,6 +104,10 @@ Instructions:
 - Download the [second text encoder from here](https://huggingface.co/Tencent-Hunyuan/HunyuanDiT/blob/main/t2i/mt5/pytorch_model.bin) and place it in `ComfyUI/models/T5` - rename it to "mT5.bin"
 - Download the [model file from here](https://huggingface.co/Tencent-Hunyuan/HunyuanDiT/blob/main/t2i/model/pytorch_model_module.pt) and place it in `ComfyUI/checkpoints` - rename it to "HunYuanDiT.pt"
 - Download/use any SDXL VAE, for example [this one](https://huggingface.co/madebyollin/sdxl-vae-fp16-fix)
+
+You can use the "simple" text encode node to only use one prompt, or you can use the regular one to pass different text to CLIP/T5.
+
+[Sample Workflow](https://github.com/city96/ComfyUI_ExtraModels/files/15444231/HyDiTV1.json)
 
 ![image](https://github.com/city96/ComfyUI_ExtraModels/assets/125218114/7a9d6e34-d3f4-4f67-a17f-4f2d6795e54e)
 
@@ -172,6 +171,8 @@ On windows, you may need a newer version of bitsandbytes for 4bit. Try `python -
 > [!IMPORTANT]  
 > You may also need to upgrade transformers and install spiece for the tokenizer. `pip install -r requirements.txt`
 
+
+
 ## MiaoBi
 
 ### Original from: 
@@ -201,7 +202,7 @@ Example Prompts:
 
 [Example Workflow (diffusers)](https://github.com/city96/ComfyUI_ExtraModels/files/15389381/MiaoBiV1D.json)
 
-![example](https://github.com/zmwv823/ComfyUI_ExtraModels/assets/13308350/e794132b-18a1-4258-a674-18714994ee67)
+![MiaoBi](https://github.com/city96/ComfyUI_ExtraModels/assets/125218114/d9e4ab7d-f61b-407f-b7dd-af5859627d0e)
 
 
 
