@@ -97,6 +97,7 @@ class HYDiTTextEncode:
 
 	def encode(self, text, text_t5, CLIP, T5):
 		# T5
+		T5.load_model()
 		t5_pre = T5.tokenizer(
 			text,
 			max_length            = T5.cond_stage_model.max_length,
@@ -117,6 +118,7 @@ class HYDiTTextEncode:
 			t5_embs = t5_outs["hidden_states"][-1].float().cpu()
 
 		# "clip"
+		CLIP.load_model()
 		clip_pre = CLIP.tokenizer(
 			text,
 			max_length            = CLIP.cond_stage_model.max_length,
