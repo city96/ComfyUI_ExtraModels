@@ -373,8 +373,8 @@ class HunYuanDiT(nn.Module):
         style = torch.as_tensor([0, 0] * (x.shape[0]//2), device=x.device)
 
         # image size - todo: from cond
-        width = x.shape[3]
-        height = x.shape[2]
+        width = x.shape[2]
+        height = x.shape[3]
         src_size_cond = (width//2*16, height//2*16)
         size_cond = list(src_size_cond) + [width*8, height*8, 0, 0]
         image_meta_size = torch.as_tensor([size_cond] * x.shape[0], device=x.device)
