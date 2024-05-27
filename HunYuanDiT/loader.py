@@ -33,6 +33,10 @@ class EXM_HYDiT_Model(comfy.model_base.BaseModel):
 		for name in ["context_t5", "context_mask", "context_t5_mask"]:
 			out[name] = comfy.conds.CONDRegular(kwargs[name])
 
+		src_size_cond = kwargs.get("src_size_cond", None)
+		if src_size_cond is not None:
+			out["src_size_cond"] = comfy.conds.CONDRegular(torch.tensor(src_size_cond))
+
 		return out
 
 def load_hydit(model_path, model_conf):

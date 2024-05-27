@@ -1,5 +1,6 @@
 import os
 import folder_paths
+from copy import deepcopy
 
 from .conf import hydit_conf
 from .loader import load_hydit
@@ -163,9 +164,35 @@ class HYDiTTextEncodeSimple(HYDiTTextEncode):
 	def encode_simple(self, text, **args):
 		return self.encode(text=text, text_t5=text, **args)
 
+class HYDiTSrcSizeCond:
+	@classmethod
+	def INPUT_TYPES(s):
+		return {
+			"required": {
+				"cond": ("CONDITIONING", ),
+				"width": ("INT", {"default": 1024.0, "min": 0, "max": 8192, "step": 16}),
+				"height": ("INT", {"default": 1024.0, "min": 0, "max": 8192, "step": 16}),
+			}
+		}
+
+	RETURN_TYPES = ("CONDITIONING",)
+	RETURN_NAMES = ("cond",)
+	FUNCTION = "add_cond"
+	CATEGORY = "ExtraModels/HunyuanDiT"
+	TITLE = "Hunyuan DiT Size Conditioning (advanced)"
+
+	def add_cond(self, cond, width, height):
+		cond = deepcopy(cond)
+		for c in range(len(cond)):
+			cond[c][1].update({
+				"src_size_cond": [[height, width]],
+			})
+		return (cond,)
+
 NODE_CLASS_MAPPINGS = {
 	"HYDiTCheckpointLoader": HYDiTCheckpointLoader,
 	"HYDiTTextEncoderLoader": HYDiTTextEncoderLoader,
 	"HYDiTTextEncode": HYDiTTextEncode,
 	"HYDiTTextEncodeSimple": HYDiTTextEncodeSimple,
+	"HYDiTSrcSizeCond": HYDiTSrcSizeCond,
 }

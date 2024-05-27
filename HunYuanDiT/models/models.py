@@ -212,6 +212,7 @@ class HunYuanDiT(nn.Module):
         self.extra_in_dim = 256 * 6 + hidden_size
 
         # Text embedding for `add`
+        self.last_size = input_size
         self.x_embedder = PatchEmbed(input_size, patch_size, in_channels, hidden_size)
         self.t_embedder = TimestepEmbedder(hidden_size)
         self.extra_in_dim += 1024
@@ -358,7 +359,7 @@ class HunYuanDiT(nn.Module):
         rope = get_2d_rotary_pos_embed(self.head_size, *sub_args)
         return rope
 
-    def forward(self, x, timesteps, context, context_mask=None, context_t5=None, context_t5_mask=None, image_meta_size=None, **kwargs):
+    def forward(self, x, timesteps, context, context_mask=None, context_t5=None, context_t5_mask=None, src_size_cond=(1024,1024), **kwargs):
         """
         Forward pass that adapts comfy input to original forward function
         x: (N, C, H, W) tensor of spatial inputs (images or latent representations of images)
@@ -370,17 +371,25 @@ class HunYuanDiT(nn.Module):
         # context_t5_mask = torch.zeros(x.shape[0], 256, device=x.device)
 
         # style
-        style = torch.as_tensor([0, 0] * (x.shape[0]//2), device=x.device)
+        style = torch.as_tensor([0] * (x.shape[0]), device=x.device)
 
-        # image size - todo: from cond
-        width = x.shape[2]
-        height = x.shape[3]
-        src_size_cond = (width//2*16, height//2*16)
-        size_cond = list(src_size_cond) + [width*8, height*8, 0, 0]
+        # image size - todo separate for cond/uncond when batched
+        if torch.is_tensor(src_size_cond):
+                src_size_cond = (int(src_size_cond[0][0]), int(src_size_cond[0][1]))
+        
+        image_size = (x.shape[2]//2*16, x.shape[3]//2*16)
+        size_cond = list(src_size_cond) + [image_size[0], image_size[1], 0, 0]
         image_meta_size = torch.as_tensor([size_cond] * x.shape[0], device=x.device)
 
         # RoPE
-        rope = self.calc_rope(*src_size_cond)
+        rope = self.calc_rope(*image_size)
+
+        # Update x_embedder if image size changed
+        if self.last_size != image_size:
+                from tqdm import tqdm
+                tqdm.write(f"HyDiT: New image size {image_size}")
+                self.x_embedder.update_image_size(image_size)
+                self.last_size = image_size
 
         # Run original forward pass
         out = self.forward_raw(
