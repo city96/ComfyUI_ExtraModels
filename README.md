@@ -101,9 +101,12 @@ The initial work on this was done by [chaojie](https://github.com/chaojie) in [t
 
 Instructions:
 - Download the [first text encoder from here](https://huggingface.co/Tencent-Hunyuan/HunyuanDiT/blob/main/t2i/clip_text_encoder/pytorch_model.bin) and place it in `ComfyUI/models/clip` - rename to "chinese-roberta-wwm-ext-large.bin"
-- Download the [second text encoder from here](https://huggingface.co/Tencent-Hunyuan/HunyuanDiT/blob/main/t2i/mt5/pytorch_model.bin) and place it in `ComfyUI/models/T5` - rename it to "mT5.bin"
+- Download the [second text encoder from here](https://huggingface.co/Tencent-Hunyuan/HunyuanDiT/blob/main/t2i/mt5/pytorch_model.bin) and place it in `ComfyUI/models/t5` - rename it to "mT5-xl.bin"
 - Download the [model file from here](https://huggingface.co/Tencent-Hunyuan/HunyuanDiT/blob/main/t2i/model/pytorch_model_module.pt) and place it in `ComfyUI/checkpoints` - rename it to "HunYuanDiT.pt"
 - Download/use any SDXL VAE, for example [this one](https://huggingface.co/madebyollin/sdxl-vae-fp16-fix)
+
+You may also try the following alternate model files for faster loading speed/smaller file size:
+- converted [second text encoder](https://huggingface.co/city96/mt5-xl-encoder-fp16/blob/main/model.safetensors) - rename to `mT5-xl-encoder-fp16.safetensors` and placed in `ComfyUI/models/t5`
 
 You can use the "simple" text encode node to only use one prompt, or you can use the regular one to pass different text to CLIP/T5.
 
