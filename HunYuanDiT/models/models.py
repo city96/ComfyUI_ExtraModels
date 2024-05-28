@@ -378,7 +378,7 @@ class HunYuanDiT(nn.Module):
                 src_size_cond = (int(src_size_cond[0][0]), int(src_size_cond[0][1]))
         
         image_size = (x.shape[2]//2*16, x.shape[3]//2*16)
-        size_cond = list(src_size_cond) + [image_size[0], image_size[1], 0, 0]
+        size_cond = list(src_size_cond) + [image_size[1], image_size[0], 0, 0]
         image_meta_size = torch.as_tensor([size_cond] * x.shape[0], device=x.device)
 
         # RoPE
@@ -388,7 +388,9 @@ class HunYuanDiT(nn.Module):
         if self.last_size != image_size:
                 from tqdm import tqdm
                 tqdm.write(f"HyDiT: New image size {image_size}")
-                self.x_embedder.update_image_size(image_size)
+                self.x_embedder.update_image_size(
+                        (image_size[0]//8, image_size[1]//8), 
+                )
                 self.last_size = image_size
 
         # Run original forward pass
