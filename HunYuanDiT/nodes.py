@@ -100,7 +100,7 @@ class HYDiTTextEncode:
 		# T5
 		T5.load_model()
 		t5_pre = T5.tokenizer(
-			text,
+			text_t5,
 			max_length            = T5.cond_stage_model.max_length,
 			padding               = 'max_length',
 			truncation            = True,
