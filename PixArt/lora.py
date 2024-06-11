@@ -87,7 +87,6 @@ def replace_model_patcher(model):
 
 	n.object_patches = model.object_patches.copy()
 	n.model_options = copy.deepcopy(model.model_options)
-	n.model_keys = model.model_keys
 	return n
 
 def find_peft_alpha(path):
@@ -120,9 +119,11 @@ def load_pixart_lora(model, lora, lora_path, strength):
 	k_back = lambda x: x.replace(".lora_up.weight", "")
 	# need to convert the actual weights for this to work.
 	if any(True for x in lora.keys() if x.endswith("adaln_single.linear.lora_A.weight")):
-		lora = convert_lora_state_dict(lora)
+		lora = convert_lora_state_dict(lora, peft=True)
 		alpha = find_peft_alpha(lora_path)
 		lora.update({f"{k_back(x)}.alpha":torch.tensor(alpha) for x in lora.keys() if "lora_up" in x})
+	else: # OneTrainer
+		lora = convert_lora_state_dict(lora, peft=False)
 
 	key_map = {k_back(x):f"diffusion_model.{k_back(x)}.weight" for x in lora.keys() if "lora_up" in x} # fake
 
