@@ -193,6 +193,44 @@ class PixArtT5TextEncode:
 		print("Encoded T5:", masked_embs.shape)
 		return ([[masked_embs, {}]], )
 
+class PixArtT5FromSD3CLIP:
+	"""
+	Split the T5 text encoder away from SD3
+	"""
+	@classmethod
+	def INPUT_TYPES(s):
+		return {
+			"required": {
+				"sd3_clip": ("CLIP",),
+				"padding": ("INT", {"default": 1, "min": 1, "max": 300}),
+			}
+		}
+
+	RETURN_TYPES = ("CLIP",)
+	RETURN_NAMES = ("t5",)
+	FUNCTION = "split"
+	CATEGORY = "ExtraModels/PixArt"
+	TITLE = "PixArt T5 from SD3 CLIP"
+
+	def split(self, sd3_clip, padding):
+		from comfy.sd3_clip import SD3Tokenizer, SD3ClipModel
+	
+		clip = sd3_clip.clone()
+		assert clip.cond_stage_model.t5xxl is not None, "CLIP must have T5 loaded!"
+
+		# model
+		tmp = SD3ClipModel(clip_l=False, clip_g=False, t5=False)
+		tmp.t5xxl = clip.cond_stage_model.t5xxl
+		
+		# tokenizer
+		tok = SD3Tokenizer()
+		tok.t5xxl.min_length = padding
+		
+		clip.cond_stage_model = tmp
+		clip.tokenizer = tok
+
+		return (clip, )
+
 NODE_CLASS_MAPPINGS = {
 	"PixArtCheckpointLoader" : PixArtCheckpointLoader,
 	"PixArtResolutionSelect" : PixArtResolutionSelect,
@@ -200,4 +238,5 @@ NODE_CLASS_MAPPINGS = {
 	"PixArtT5TextEncode" : PixArtT5TextEncode,
 	"PixArtResolutionCond" : PixArtResolutionCond,
 	"PixArtControlNetCond" : PixArtControlNetCond,
+	"PixArtT5FromSD3CLIP": PixArtT5FromSD3CLIP,
 }
