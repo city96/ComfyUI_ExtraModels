@@ -214,14 +214,26 @@ class PixArtT5FromSD3CLIP:
 
 	def split(self, sd3_clip, padding):
 		from comfy.sd3_clip import SD3Tokenizer, SD3ClipModel
+		import copy
 	
 		clip = sd3_clip.clone()
 		assert clip.cond_stage_model.t5xxl is not None, "CLIP must have T5 loaded!"
 
-		# model
+		# remove transformer
+		transformer = clip.cond_stage_model.t5xxl.transformer
+		clip.cond_stage_model.t5xxl.transformer = None
+
+		# clone object
 		tmp = SD3ClipModel(clip_l=False, clip_g=False, t5=False)
-		tmp.t5xxl = clip.cond_stage_model.t5xxl
-		
+		tmp.t5xxl = copy.deepcopy(clip.cond_stage_model.t5xxl)
+		# put transformer back
+		clip.cond_stage_model.t5xxl.transformer = transformer
+		tmp.t5xxl.transformer = transformer
+
+		# override special tokens
+		tmp.t5xxl.special_tokens = copy.deepcopy(clip.cond_stage_model.t5xxl.special_tokens)
+		tmp.t5xxl.special_tokens.pop("end") # make sure empty tokens match
+
 		# tokenizer
 		tok = SD3Tokenizer()
 		tok.t5xxl.min_length = padding
