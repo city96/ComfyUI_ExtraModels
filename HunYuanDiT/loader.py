@@ -77,6 +77,5 @@ def load_hydit(model_path, model_conf):
 		load_device = load_device,
 		offload_device = offload_device,
 		current_device = "cpu",
-		size = 6 * (1024**3),
 	)
 	return model_patcher

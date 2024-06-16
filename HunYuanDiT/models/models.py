@@ -244,9 +244,6 @@ class HunYuanDiT(nn.Module):
         self.final_layer = FinalLayer(hidden_size, hidden_size, patch_size, self.out_channels)
         self.unpatchify_channels = self.out_channels
 
-        # probably not needed when not training?
-        # self.initialize_weights()
-
     def forward_raw(self,
                 x,
                 t,
@@ -414,40 +411,6 @@ class HunYuanDiT(nn.Module):
                 return eps
         else:
                 return out
-
-
-    def initialize_weights(self):
-        # Initialize transformer layers:
-        def _basic_init(module):
-            if isinstance(module, nn.Linear):
-                torch.nn.init.xavier_uniform_(module.weight)
-                if module.bias is not None:
-                    nn.init.constant_(module.bias, 0)
-        self.apply(_basic_init)
-
-        # Initialize patch_embed like nn.Linear (instead of nn.Conv2d):
-        w = self.x_embedder.proj.weight.data
-        nn.init.xavier_uniform_(w.view([w.shape[0], -1]))
-        nn.init.constant_(self.x_embedder.proj.bias, 0)
-
-        # Initialize label embedding table:
-        nn.init.normal_(self.extra_embedder[0].weight, std=0.02)
-        nn.init.normal_(self.extra_embedder[2].weight, std=0.02)
-
-        # Initialize timestep embedding MLP:
-        nn.init.normal_(self.t_embedder.mlp[0].weight, std=0.02)
-        nn.init.normal_(self.t_embedder.mlp[2].weight, std=0.02)
-
-        # Zero-out adaLN modulation layers in HunYuanDiT blocks:
-        for block in self.blocks:
-            nn.init.constant_(block.default_modulation[-1].weight, 0)
-            nn.init.constant_(block.default_modulation[-1].bias, 0)
-
-        # Zero-out output layers:
-        nn.init.constant_(self.final_layer.adaLN_modulation[-1].weight, 0)
-        nn.init.constant_(self.final_layer.adaLN_modulation[-1].bias, 0)
-        nn.init.constant_(self.final_layer.linear.weight, 0)
-        nn.init.constant_(self.final_layer.linear.bias, 0)
 
     def unpatchify(self, x, h, w):
         """
