@@ -84,10 +84,14 @@ class MultiHeadCrossAttention(nn.Module):
                 for n in range(B - 1):
                     attn_mask = torch.block_diag(attn_mask, attn_mask_template)
 
+            p = 0 # IPEX will hijack attn_drop and turn it into Identity()
+            if(type(self.attn_drop) != nn.Identity): 
+                p = self.attn_drop.p
+
             x = torch.nn.functional.scaled_dot_product_attention(
                 q, k, v,
                 attn_mask=attn_mask,
-                dropout_p=self.attn_drop.p
+                dropout_p=p
             ).permute(0, 2, 1, 3).contiguous()
         x = x.view(B, -1, C)
         x = self.proj(x)
@@ -193,9 +197,14 @@ class AttentionKVCompress(Attention_):
             )
         else:
             q, k, v = map(lambda t: t.transpose(1, 2),(q, k, v),)
+
+            p = 0 # IPEX will hijack attn_drop and turn it into Identity()
+            if(type(self.attn_drop) != nn.Identity): 
+                p = self.attn_drop.p
+            
             x = torch.nn.functional.scaled_dot_product_attention(
                 q, k, v,
-                dropout_p=self.attn_drop.p,
+                dropout_p=p,
                 attn_mask=attn_bias
             ).transpose(1, 2).contiguous()
         x = x.view(B, N, C)
