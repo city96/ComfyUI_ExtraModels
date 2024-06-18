@@ -15,18 +15,28 @@ import torch.nn.functional as F
 from timm.models.vision_transformer import Mlp, Attention as Attention_
 from einops import rearrange
 
+sdpa = torch.nn.functional.scaled_dot_product_attention
+
 from comfy import model_management
 if model_management.xformers_enabled():
     import xformers
     import xformers.ops
 else:
-    print("""
-########################################
- PixArt: Not using xformers!
-  Expect images to be non-deterministic!
-  Batch sizes > 1 are most likely broken
-########################################
-""")
+    if model_management.xpu_available:
+        import intel_extension_for_pytorch as ipex
+        import os
+        if not torch.xpu.has_fp64_dtype() and not os.environ.get('IPEX_FORCE_ATTENTION_SLICE', None):
+            from ...IPEX.attention import scaled_dot_product_attention_32_bit
+            sdpa = scaled_dot_product_attention_32_bit
+            print("Using IPEX 4GB SDPA workaround")
+    else: # Batch sizes > 1 are not broken with IPEX.
+        print("""
+    ########################################
+    PixArt: Not using xformers!
+    Expect images to be non-deterministic!
+    Batch sizes > 1 are most likely broken
+    ########################################
+    """)
 
 def modulate(x, shift, scale):
     return x * (1 + scale.unsqueeze(1)) + shift.unsqueeze(1)
@@ -88,7 +98,7 @@ class MultiHeadCrossAttention(nn.Module):
             if(type(self.attn_drop) != nn.Identity): 
                 p = self.attn_drop.p
 
-            x = torch.nn.functional.scaled_dot_product_attention(
+            x = sdpa(
                 q, k, v,
                 attn_mask=attn_mask,
                 dropout_p=p
@@ -202,7 +212,7 @@ class AttentionKVCompress(Attention_):
             if(type(self.attn_drop) != nn.Identity): 
                 p = self.attn_drop.p
             
-            x = torch.nn.functional.scaled_dot_product_attention(
+            x = sdpa(
                 q, k, v,
                 dropout_p=p,
                 attn_mask=attn_bias
