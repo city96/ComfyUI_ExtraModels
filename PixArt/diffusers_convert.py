@@ -17,7 +17,7 @@ conversion_map_ms = [ # for multi_scale_train (MS)
 ]
 
 def get_depth(state_dict):
-	return sum(key.endswith('.scale_shift_table') for key in state_dict.keys())
+	return sum(key.endswith('.attn1.to_k.bias') for key in state_dict.keys())
 
 def get_conversion_map(state_dict):
 	conversion_map = [  # main SD conversion map (PixArt reference, HF Diffusers)

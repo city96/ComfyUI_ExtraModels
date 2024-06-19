@@ -76,7 +76,7 @@ def load_pixart(model_path, model_conf):
 		device=model_management.get_torch_device()
 	)
 
-	model_conf.unet_config['depth'] = sum(key.endswith('.scale_shift_table') for key in state_dict.keys())
+	model_conf.unet_config['depth'] = sum(key.endswith('mlp.fc1.weight') for key in state_dict.keys())
 
 	if model_conf.model_target == "PixArtMS":
 		from .models.PixArtMS import PixArtMS
