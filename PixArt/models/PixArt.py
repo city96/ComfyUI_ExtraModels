@@ -72,6 +72,7 @@ class PixArt(nn.Module):
             drop_path: float = 0.,
             caption_channels=4096,
             pe_interpolation=1.0,
+            pe_precision=None,
             config=None,
             model_max_length=120,
             qk_norm=False,
@@ -85,6 +86,7 @@ class PixArt(nn.Module):
         self.patch_size = patch_size
         self.num_heads = num_heads
         self.pe_interpolation = pe_interpolation
+        self.pe_precision = pe_precision
         self.depth = depth
 
         self.x_embedder = PatchEmbed(input_size, patch_size, in_channels, hidden_size, bias=True)

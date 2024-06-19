@@ -98,7 +98,8 @@ class PixArtMS(PixArt):
             pred_sigma=True,
             drop_path: float = 0.,
             caption_channels=4096,
-            pe_interpolation=1.,
+            pe_interpolation=None,
+            pe_precision=None,
             config=None,
             model_max_length=120,
             micro_condition=True,
@@ -168,10 +169,16 @@ class PixArtMS(PixArt):
         x = x.to(self.dtype)
         timestep = t.to(self.dtype)
         y = y.to(self.dtype)
+        
+        pe_interpolation = self.pe_interpolation
+        if pe_interpolation is None or self.pe_precision is not None:
+            # calculate pe_interpolation on-the-fly
+            pe_interpolation = round((x.shape[-1]+x.shape[-2])/2.0 / (512/8.0), self.pe_precision or 0)
+
         self.h, self.w = x.shape[-2]//self.patch_size, x.shape[-1]//self.patch_size
         pos_embed = torch.from_numpy(
             get_2d_sincos_pos_embed(
-                self.pos_embed.shape[-1], (self.h, self.w), pe_interpolation=self.pe_interpolation,
+                self.pos_embed.shape[-1], (self.h, self.w), pe_interpolation=pe_interpolation,
                 base_size=self.base_size
             )
         ).unsqueeze(0).to(x.device).to(self.dtype)
