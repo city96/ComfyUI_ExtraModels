@@ -32,6 +32,21 @@ class PixArtCheckpointLoader:
 		)
 		return (model,)
 
+class PixArtCheckpointLoaderSimple(PixArtCheckpointLoader):
+	@classmethod
+	def INPUT_TYPES(s):
+		return {
+			"required": {
+				"ckpt_name": (folder_paths.get_filename_list("checkpoints"),),
+			}
+		}
+	TITLE = "PixArt Checkpoint Loader (auto)"
+
+	def load_checkpoint(self, ckpt_name):
+		ckpt_path = folder_paths.get_full_path("checkpoints", ckpt_name)
+		model = load_pixart(model_path=ckpt_path)
+		return (model,)
+
 class PixArtResolutionSelect():
 	@classmethod
 	def INPUT_TYPES(s):
@@ -245,6 +260,7 @@ class PixArtT5FromSD3CLIP:
 
 NODE_CLASS_MAPPINGS = {
 	"PixArtCheckpointLoader" : PixArtCheckpointLoader,
+	"PixArtCheckpointLoaderSimple" : PixArtCheckpointLoaderSimple,
 	"PixArtResolutionSelect" : PixArtResolutionSelect,
 	"PixArtLoraLoader" : PixArtLoraLoader,
 	"PixArtT5TextEncode" : PixArtT5TextEncode,
