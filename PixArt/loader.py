@@ -81,8 +81,6 @@ def load_pixart(model_path, model_conf=None):
 		device=model_management.get_torch_device()
 	)
 
-	model_conf.unet_config['depth'] = sum(key.endswith('mlp.fc1.weight') for key in state_dict.keys())
-
 	if model_conf.model_target == "PixArtMS":
 		from .models.PixArtMS import PixArtMS
 		model.diffusion_model = PixArtMS(**model_conf.unet_config)
