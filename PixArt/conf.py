@@ -37,6 +37,21 @@ pixart_conf = {
 		},
 		"sampling_settings" : sampling_settings,
 	},
+	"PixArtMS_Sigma_XL_2_900M": {
+		"target": "PixArtMSSigma",
+		"unet_config": {
+			"input_size": 1024 // 8,
+			"token_num": 300,
+			"depth": 42,
+			"num_heads": 16,
+			"patch_size": 2,
+			"hidden_size": 1152,
+			"micro_condition": False,
+			"pe_interpolation": 2,
+			"model_max_length": 300,
+		},
+		"sampling_settings": sampling_settings,
+	},
 	"PixArtMS_Sigma_XL_2_2K": {
 		"target": "PixArtMSSigma",
 		"unet_config": {
