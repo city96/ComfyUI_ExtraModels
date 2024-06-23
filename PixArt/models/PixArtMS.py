@@ -181,7 +181,7 @@ class PixArtMS(PixArt):
                 self.pos_embed.shape[-1], (self.h, self.w), pe_interpolation=pe_interpolation,
                 base_size=self.base_size
             )
-        ).unsqueeze(0).to(x.device).to(self.dtype)
+        ).unsqueeze(0).to(device=x.device, dtype=self.dtype)
 
         x = self.x_embedder(x) + pos_embed  # (N, T, D), where T = H * W / patch_size ** 2
         t = self.t_embedder(timestep)  # (N, D)
@@ -231,7 +231,7 @@ class PixArtMS(PixArt):
                 device=x.device
             ).repeat(bs, 1)
         else:
-            data_info["img_hw"] = img_hw.to(x.dtype).to(x.device)
+            data_info["img_hw"] = img_hw.to(dtype=x.dtype, device=x.device)
         if aspect_ratio is None or True:
             data_info["aspect_ratio"] = torch.tensor(
                 [[x.shape[2]/x.shape[3]]],
@@ -239,7 +239,7 @@ class PixArtMS(PixArt):
                 device=x.device
             ).repeat(bs, 1)
         else:
-            data_info["aspect_ratio"] = aspect_ratio.to(x.dtype).to(x.device)
+            data_info["aspect_ratio"] = aspect_ratio.to(dtype=x.dtype, device=x.device)
 
         ## Still accepts the input w/o that dim but returns garbage
         if len(context.shape) == 3:
