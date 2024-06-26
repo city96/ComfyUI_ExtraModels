@@ -14,8 +14,12 @@ import torch.nn as nn
 import torch.nn.functional as F
 from timm.models.vision_transformer import Mlp, Attention as Attention_
 from einops import rearrange
+from functools import reduce
+import operator # operator.mul
 
-sdpa = torch.nn.functional.scaled_dot_product_attention
+sdpa_32b = None
+Q_4GB_LIMIT = 16000000
+"""If q is greater than this, the operation will likely require >4GB VRAM, which will fail on Intel Arc Alchemist GPUs without a workaround."""
 
 from comfy import model_management
 if model_management.xformers_enabled():
@@ -27,8 +31,10 @@ else:
         import os
         if not torch.xpu.has_fp64_dtype() and not os.environ.get('IPEX_FORCE_ATTENTION_SLICE', None):
             from ...IPEX.attention import scaled_dot_product_attention_32_bit
-            sdpa = scaled_dot_product_attention_32_bit
+            sdpa_32b = scaled_dot_product_attention_32_bit
             print("Using IPEX 4GB SDPA workaround")
+        else:
+            print("No IPEX 4GB workaround")
     else: # Batch sizes > 1 are not broken with IPEX.
         print("""
     ########################################
@@ -94,9 +100,12 @@ class MultiHeadCrossAttention(nn.Module):
                 for n in range(B - 1):
                     attn_mask = torch.block_diag(attn_mask, attn_mask_template)
 
-            p = 0 # IPEX will hijack attn_drop and turn it into Identity()
-            if(type(self.attn_drop) != nn.Identity): 
-                p = self.attn_drop.p
+            p = getattr(self.attn_drop, "p", 0) # IPEX.optimize() will turn attn_drop into an Identity()
+
+            if reduce(operator.mul, q.size()) > Q_4GB_LIMIT and sdpa_32b:
+                sdpa = sdpa_32b
+            else:
+                sdpa = torch.nn.functional.scaled_dot_product_attention
 
             x = sdpa(
                 q, k, v,
@@ -208,10 +217,13 @@ class AttentionKVCompress(Attention_):
         else:
             q, k, v = map(lambda t: t.transpose(1, 2),(q, k, v),)
 
-            p = 0 # IPEX will hijack attn_drop and turn it into Identity()
-            if(type(self.attn_drop) != nn.Identity): 
-                p = self.attn_drop.p
+            p = getattr(self.attn_drop, "p", 0) # IPEX.optimize() will turn attn_drop into an Identity()
             
+            if reduce(operator.mul, q.size()) > Q_4GB_LIMIT and sdpa_32b:
+                sdpa = sdpa_32b
+            else:
+                sdpa = torch.nn.functional.scaled_dot_product_attention
+
             x = sdpa(
                 q, k, v,
                 dropout_p=p,
