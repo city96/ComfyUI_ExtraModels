@@ -1,5 +1,5 @@
-# Code lifted from https://github.com/vladmandic/automatic/blob/master/modules/intel/ipex/attention.py
-# Thanks to whoever wrote it originally
+# Code lifted from https://github.com/Disty0/ipex_to_cuda/blob/main/attention.py
+# Thanks to Disty0! 
 
 import os
 import torch
