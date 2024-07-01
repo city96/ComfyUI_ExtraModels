@@ -19,6 +19,9 @@ conversion_map_ms = [ # for multi_scale_train (MS)
 def get_depth(state_dict):
 	return sum(key.endswith('.attn1.to_k.bias') for key in state_dict.keys())
 
+def get_lora_depth(state_dict):
+	return sum(key.endswith('.attn1.to_k.lora_A.weight') for key in state_dict.keys())
+
 def get_conversion_map(state_dict):
 	conversion_map = [  # main SD conversion map (PixArt reference, HF Diffusers)
 		# Patch embeddings
@@ -150,8 +153,9 @@ def convert_lora_state_dict(state_dict, peft=True):
 	new_state_dict = {k: state_dict[v] for k,v in cmap if k not in missing}
 	matched = list(v for k,v in cmap if v in state_dict.keys())
 
+	lora_depth = get_lora_depth(state_dict)
 	for fp, fk in ((rep_ap, rep_ak),(rep_bp, rep_bk)):
-		for depth in range(get_depth(state_dict)):
+		for depth in range(lora_depth):
 			# Self Attention
 			key = lambda a: fp(f"transformer_blocks.{depth}.attn1.to_{a}.weight")
 			new_state_dict[fk(f"blocks.{depth}.attn.qkv.weight")] = torch.cat((
@@ -163,6 +167,11 @@ def convert_lora_state_dict(state_dict, peft=True):
 				akey = lambda a: rep_pp(f"transformer_blocks.{depth}.attn1.to_{a}.weight")
 				new_state_dict[rep_pk((f"blocks.{depth}.attn.qkv.weight"))] = state_dict[akey("q")]
 				matched += [akey('q'), akey('k'), akey('v')]
+
+			# Self Attention projection?
+			key = lambda a: fp(f"transformer_blocks.{depth}.attn1.to_{a}.weight")
+			new_state_dict[fk(f"blocks.{depth}.attn.proj.weight")] = state_dict[key('out.0')]
+			matched += [key('out.0')]
 
 			# Cross-attention (linear)
 			key = lambda a: fp(f"transformer_blocks.{depth}.attn2.to_{a}.weight")
@@ -176,7 +185,19 @@ def convert_lora_state_dict(state_dict, peft=True):
 				new_state_dict[rep_pk((f"blocks.{depth}.cross_attn.q_linear.weight"))]  = state_dict[akey("q")]
 				new_state_dict[rep_pk((f"blocks.{depth}.cross_attn.kv_linear.weight"))] = state_dict[akey("k")]
 				matched += [akey('q'), akey('k'), akey('v')]
+			
+			# Cross Attention projection?
+			key = lambda a: fp(f"transformer_blocks.{depth}.attn2.to_{a}.weight")
+			new_state_dict[fk(f"blocks.{depth}.cross_attn.proj.weight")] = state_dict[key('out.0')]
+			matched += [key('out.0')]
+			
+			key = fp(f"transformer_blocks.{depth}.ff.net.0.proj.weight")
+			new_state_dict[fk(f"blocks.{depth}.mlp.fc1.weight")]  = state_dict[key]
+			matched += [key]
 
+			key = fp(f"transformer_blocks.{depth}.ff.net.2.weight")
+			new_state_dict[fk(f"blocks.{depth}.mlp.fc2.weight")]  = state_dict[key]
+			matched += [key]
 
 	if len(matched) < len(state_dict):
 		print(f"PixArt: LoRA conversion has leftover keys! ({len(matched)} vs {len(state_dict)})")
