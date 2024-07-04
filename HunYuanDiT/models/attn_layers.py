@@ -362,13 +362,10 @@ class Attention(nn.Module):
                 f'qq: {qq.shape}, q: {q.shape}, kk: {kk.shape}, k: {k.shape}'
             q, k = qq, kk
 
-        q = q * self.scale
-        attn = q @ k.transpose(-2, -1)              # [b, h, s, d] @ [b, h, d, s]
-        attn = attn.softmax(dim=-1)                 # [b, h, s, s]
-        attn = self.attn_drop(attn)
-        x = attn @ v                                # [b, h, s, d]
-
-        x = x.transpose(1, 2).reshape(B, N, C)      # [b, s, h, d]
+        # just use SDP here for now
+        x = torch.nn.functional.scaled_dot_product_attention(
+                q, k, v,
+        ).permute(0, 2, 1, 3).contiguous().reshape(B, N, C)
         x = self.out_proj(x)
         x = self.proj_drop(x)
 
