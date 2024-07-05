@@ -36,14 +36,6 @@ else:
             print("Using IPEX 4GB SDPA workaround")
         else:
             print("No IPEX 4GB workaround")
-    else: # Batch sizes > 1 are not broken with IPEX.
-        print("""
-    ########################################
-    PixArt: Not using xformers!
-    Expect images to be non-deterministic!
-    Batch sizes > 1 are most likely broken
-    ########################################
-    """)
 
 def modulate(x, shift, scale):
     return x * (1 + scale.unsqueeze(1)) + shift.unsqueeze(1)
