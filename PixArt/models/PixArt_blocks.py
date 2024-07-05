@@ -14,12 +14,13 @@ import torch.nn as nn
 import torch.nn.functional as F
 from timm.models.vision_transformer import Mlp, Attention as Attention_
 from einops import rearrange
-from functools import reduce
-import operator # operator.mul
 
 sdpa_32b = None
-Q_4GB_LIMIT = 16000000
+Q_4GB_LIMIT = 32000000
 """If q is greater than this, the operation will likely require >4GB VRAM, which will fail on Intel Arc Alchemist GPUs without a workaround."""
+# 2k   = 37 748 736
+# 1024 =  9 437 184
+# 2k model goes very slightly over 4GB
 
 from comfy import model_management
 if model_management.xformers_enabled():
@@ -102,7 +103,7 @@ class MultiHeadCrossAttention(nn.Module):
 
             p = getattr(self.attn_drop, "p", 0) # IPEX.optimize() will turn attn_drop into an Identity()
 
-            if reduce(operator.mul, q.size()) > Q_4GB_LIMIT and sdpa_32b:
+            if sdpa_32b is not None and (q.element_size() * q.nelement()) > Q_4GB_LIMIT:
                 sdpa = sdpa_32b
             else:
                 sdpa = torch.nn.functional.scaled_dot_product_attention
@@ -219,7 +220,7 @@ class AttentionKVCompress(Attention_):
 
             p = getattr(self.attn_drop, "p", 0) # IPEX.optimize() will turn attn_drop into an Identity()
             
-            if reduce(operator.mul, q.size()) > Q_4GB_LIMIT and sdpa_32b:
+            if sdpa_32b is not None and (q.element_size() * q.nelement()) > Q_4GB_LIMIT:
                 sdpa = sdpa_32b
             else:
                 sdpa = torch.nn.functional.scaled_dot_product_attention
