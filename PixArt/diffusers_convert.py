@@ -20,7 +20,14 @@ def get_depth(state_dict):
 	return sum(key.endswith('.attn1.to_k.bias') for key in state_dict.keys())
 
 def get_lora_depth(state_dict):
-	return sum(key.endswith('.attn1.to_k.lora_A.weight') for key in state_dict.keys())
+	cnt = max([
+		sum(key.endswith('.attn1.to_k.lora_A.weight') for key in state_dict.keys()),
+		sum(key.endswith('_attn1_to_k.lora_A.weight') for key in state_dict.keys()),
+		sum(key.endswith('.attn1.to_k.lora_up.weight') for key in state_dict.keys()),
+		sum(key.endswith('_attn1_to_k.lora_up.weight') for key in state_dict.keys()),
+	])
+	assert cnt > 0, "Unable to detect model depth!"
+	return cnt
 
 def get_conversion_map(state_dict):
 	conversion_map = [  # main SD conversion map (PixArt reference, HF Diffusers)
@@ -191,13 +198,19 @@ def convert_lora_state_dict(state_dict, peft=True):
 			new_state_dict[fk(f"blocks.{depth}.cross_attn.proj.weight")] = state_dict[key('out.0')]
 			matched += [key('out.0')]
 			
-			key = fp(f"transformer_blocks.{depth}.ff.net.0.proj.weight")
-			new_state_dict[fk(f"blocks.{depth}.mlp.fc1.weight")]  = state_dict[key]
-			matched += [key]
+			try:
+				key = fp(f"transformer_blocks.{depth}.ff.net.0.proj.weight")
+				new_state_dict[fk(f"blocks.{depth}.mlp.fc1.weight")]  = state_dict[key]
+				matched += [key]
+			except KeyError:
+				pass
 
-			key = fp(f"transformer_blocks.{depth}.ff.net.2.weight")
-			new_state_dict[fk(f"blocks.{depth}.mlp.fc2.weight")]  = state_dict[key]
-			matched += [key]
+			try:
+				key = fp(f"transformer_blocks.{depth}.ff.net.2.weight")
+				new_state_dict[fk(f"blocks.{depth}.mlp.fc2.weight")]  = state_dict[key]
+				matched += [key]
+			except KeyError:
+				pass
 
 	if len(matched) < len(state_dict):
 		print(f"PixArt: LoRA conversion has leftover keys! ({len(matched)} vs {len(state_dict)})")
