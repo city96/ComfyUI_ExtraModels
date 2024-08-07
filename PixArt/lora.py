@@ -78,7 +78,6 @@ def replace_model_patcher(model):
 		size                  = model.size,
 		load_device           = model.load_device,
 		offload_device        = model.offload_device,
-		current_device        = model.current_device,
 		weight_inplace_update = model.weight_inplace_update,
 	)
 	n.patches = {}

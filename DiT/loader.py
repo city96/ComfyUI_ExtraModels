@@ -56,6 +56,5 @@ def load_dit(model_path, model_conf):
 		model,
 		load_device = load_device,
 		offload_device = offload_device,
-		current_device = "cpu",
 	)
 	return model_patcher

@@ -58,7 +58,6 @@ class EXM_T5v11:
 			self.cond_stage_model,
 			load_device    = self.load_device,
 			offload_device = self.offload_device,
-			current_device = self.load_device,
 			size           = size,
 		)
 

@@ -127,7 +127,6 @@ class EXM_HyDiT_Tenc_Temp:
 			self.cond_stage_model,
 			load_device    = self.load_device,
 			offload_device = self.offload_device,
-			current_device = self.load_device,
 			size           = size,
 		)
 
