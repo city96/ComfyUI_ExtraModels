@@ -252,6 +252,10 @@ class PixArtT5FromSD3CLIP:
 		# override special tokens
 		tmp.t5xxl.special_tokens = copy.deepcopy(clip.cond_stage_model.t5xxl.special_tokens)
 		tmp.t5xxl.special_tokens.pop("end") # make sure empty tokens match
+		
+		# add attn mask opt if present in original
+		if hasattr(sd3_clip.cond_stage_model, "t5_attention_mask"):
+			tmp.t5_attention_mask = False
 
 		# tokenizer
 		tok = SD3Tokenizer()
