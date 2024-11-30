@@ -1,4 +1,6 @@
 import folder_paths
+import torch
+import comfy
 
 from .conf import vae_conf
 from .loader import EXVAE
@@ -11,6 +13,8 @@ dtypes = [
 	"FP16",
 	"BF16"
 ]
+
+MAX_RESOLUTION=16384
 
 class ExtraVAELoader:
 	@classmethod
@@ -33,6 +37,34 @@ class ExtraVAELoader:
 		vae = EXVAE(model_path, model_conf, string_to_dtype(dtype, "vae"))
 		return (vae,)
 
+
+class EmptyDCAELatentImage:
+    def __init__(self):
+        self.device = comfy.model_management.intermediate_device()
+
+    @classmethod
+    def INPUT_TYPES(s):
+        return {
+            "required": { 
+                "width": ("INT", {"default": 512, "min": 16, "max": MAX_RESOLUTION, "step": 8, "tooltip": "The width of the latent images in pixels."}),
+                "height": ("INT", {"default": 512, "min": 16, "max": MAX_RESOLUTION, "step": 8, "tooltip": "The height of the latent images in pixels."}),
+                "batch_size": ("INT", {"default": 1, "min": 1, "max": 4096, "tooltip": "The number of latent images in the batch."})
+            }
+        }
+    RETURN_TYPES = ("LATENT",)
+    OUTPUT_TOOLTIPS = ("The empty latent image batch.",)
+    FUNCTION = "generate"
+    TITLE = "Empty DCAE Latent Image"
+
+    CATEGORY = "latent"
+    DESCRIPTION = "Create a new batch of empty latent images to be denoised via sampling."
+
+    def generate(self, width, height, batch_size=1):
+        latent = torch.zeros([batch_size, 32, height // 32, width // 32], device=self.device)
+        return ({"samples":latent}, )
+
+
 NODE_CLASS_MAPPINGS = {
 	"ExtraVAELoader" : ExtraVAELoader,
+	"EmptyDCAELatentImage" : EmptyDCAELatentImage,
 }
