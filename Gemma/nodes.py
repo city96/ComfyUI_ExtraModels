@@ -109,11 +109,10 @@ class GemmaTextEncode:
                 return_tensors="pt"
             ).to(text_encoder.device)
             
-            cond = text_encoder(tokens.input_ids, tokens.attention_mask)[0][:, None]
+            cond = text_encoder(tokens.input_ids, tokens.attention_mask)[0]
             emb_masks = tokens.attention_mask
             
-        # 利用emb_masks将有效的cond选出来，其他置零
-        # cond = cond * emb_masks.unsqueeze(-1)
+        cond = cond * emb_masks.unsqueeze(-1)
 
         return ([[cond, {}]], )
 

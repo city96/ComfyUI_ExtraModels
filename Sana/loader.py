@@ -48,7 +48,7 @@ class EXM_Sana_Model(comfy.model_base.BaseModel):
 		return out
 
 
-def load_sana(model_path, model_conf, dtype):
+def load_sana(model_path, model_conf):
 	state_dict = comfy.utils.load_torch_file(model_path)
 	state_dict = state_dict.get("model", state_dict)
 
@@ -62,7 +62,7 @@ def load_sana(model_path, model_conf, dtype):
 		state_dict = convert_state_dict(state_dict) # Diffusers
 
 	parameters = comfy.utils.calculate_parameters(state_dict)
-	unet_dtype = dtype
+	unet_dtype = comfy.model_management.unet_dtype()
 	load_device = comfy.model_management.get_torch_device()
 	offload_device = comfy.model_management.unet_offload_device()
 

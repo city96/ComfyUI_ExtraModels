@@ -23,7 +23,6 @@ class SanaCheckpointLoader:
 			"required": {
 				"ckpt_name": (folder_paths.get_filename_list("checkpoints"),),
 				"model": (list(sana_conf.keys()),),
-				"dtype": (dtypes,),
 			}
 		}
 	RETURN_TYPES = ("MODEL",)
@@ -32,13 +31,12 @@ class SanaCheckpointLoader:
 	CATEGORY = "ExtraModels/Sana"
 	TITLE = "Sana Checkpoint Loader"
 
-	def load_checkpoint(self, ckpt_name, model, dtype):
+	def load_checkpoint(self, ckpt_name, model):
 		ckpt_path = folder_paths.get_full_path("checkpoints", ckpt_name)
 		model_conf = sana_conf[model]
 		model = load_sana(
 			model_path = ckpt_path,
 			model_conf = model_conf,
-			dtype = string_to_dtype(dtype, "text_encoder")
 		)
 		return (model,)
 
@@ -132,8 +130,6 @@ class SanaTextEncode:
 			emb_masks = tokens.attention_mask[:, select_idx]
 		# 利用emb_masks将有效的embs选出来，其他置零
 		embs = embs * emb_masks.unsqueeze(-1)
-		# import IPython
-		# IPython.embed()
 			
 		return ([[embs, {}]], )
 

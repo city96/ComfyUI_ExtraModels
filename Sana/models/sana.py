@@ -159,7 +159,7 @@ class Sana(nn.Module):
         caption_channels=2304,
         pe_interpolation=1.0,
         config=None,
-        model_max_length=120,
+        model_max_length=300,
         qk_norm=False,
         y_norm=False,
         norm_eps=1e-5,
@@ -182,6 +182,7 @@ class Sana(nn.Module):
         self.depth = depth
         self.use_pe = use_pe
         self.y_norm = y_norm
+        self.model_max_length = model_max_length
         self.fp32_attention = kwargs.get("use_fp32_attention", False)
 
         kernel_size = patch_embed_kernel or patch_size
