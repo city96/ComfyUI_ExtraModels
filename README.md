@@ -36,6 +36,27 @@ git pull
 Alternatively, use the manager, assuming it has an update function.
 
 
+## Sana
+
+[Original Repo](https://github.com/NVlabs/Sana)
+
+### Model info / implementation
+- Uses Gemma2 2B as the text encoder
+- Multiple resolutions and models available
+- Compressed latent space (32 channels, /32 compression) - needs custom VAE
+
+### Usage
+1. Download the model weights from the [Sana HF repo](https://huggingface.co/Efficient-Large-Model/Sana_1600M_1024px/tree/main/checkpoints) - the HF account has alternative models available too.
+2. Place them in your checkpoints folder
+3. Load them with the correct PixArt checkpoint loader
+4. Use the "Gemma Loader" node - it should automatically download the requested model from Huggingface - Recommended to use the 4bit quantized model on CPU when low on memory.
+5. Download the VAE from [here](https://huggingface.co/Efficient-Large-Model/dc_ae_f32c32_sana_1.0_diffusers/tree/main) and place it in your VAE folder after renaming it.
+6. Use either the "Empty Sana Latent Image" or "Empty DCAE Latent Image" node for the latent input when doing txt2img.
+
+[Sample workflow](https://github.com/user-attachments/files/18027854/SanaV1.json)
+
+![Sana](https://github.com/user-attachments/assets/e4334352-e894-416a-b200-dff096027481)
+
 
 ## PixArt
 
@@ -50,9 +71,9 @@ Alternatively, use the manager, assuming it has an update function.
 ### Usage
 
 1. Download the model weights from the [PixArt alpha repo](https://huggingface.co/PixArt-alpha/PixArt-alpha/tree/main) - you most likely want the 1024px one - `PixArt-XL-2-1024-MS.pth`
-2. Place them in your checkpoints folder
-3. Load them with the correct PixArt checkpoint loader
-4. **Follow the T5v11 section of this readme** to set up the T5 text encoder
+3. Place them in your checkpoints folder
+4. Load them with the correct PixArt checkpoint loader
+5. **Follow the T5v11 section of this readme** to set up the T5 text encoder
 
 > [!TIP]
 > You should be able to use the model with the default KSampler if you're on the latest version of the node.
