@@ -226,8 +226,6 @@ class Sana(nn.Module):
         )
         self.final_layer = T2IFinalLayer(hidden_size, patch_size, self.out_channels)
 
-        self.initialize_weights()
-
     def forward(self, x, timestep, y, mask=None, data_info=None, **kwargs):
         """
         Forward pass of Sana.

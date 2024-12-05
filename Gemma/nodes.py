@@ -6,17 +6,11 @@ from ..utils.dtype import string_to_dtype
 from huggingface_hub import snapshot_download
 
 
-# 初始化自定义文件夹路径
-os.makedirs(
-    os.path.join(folder_paths.models_dir, "text_encoders"),
-    exist_ok=True
-)
-folder_paths.folder_names_and_paths["text_encoders"] = (
-    [
-        os.path.join(folder_paths.models_dir, "text_encoders"),
-        *folder_paths.folder_names_and_paths.get("text_encoders", [[],set()])[0]
-    ],
-    folder_paths.supported_pt_extensions
+tenc_root = (
+    folder_paths.folder_names_and_paths.get(
+        "text_encoders",
+        folder_paths.folder_names_and_paths.get("clip", [[], set()])
+    )
 )
 
 dtypes = [

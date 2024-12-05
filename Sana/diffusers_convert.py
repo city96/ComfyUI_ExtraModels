@@ -1,20 +1,8 @@
 # For using the diffusers format weights
 #  Based on the original ComfyUI function + 
-#  https://github.com/PixArt-alpha/PixArt-alpha/blob/master/tools/convert_pixart_alpha_to_diffusers.py
+#  https://github.com/NVlabs/Sana/blob/main/tools/convert_sana_to_diffusers.py
 import torch
 
-conversion_map_ms = [ # for multi_scale_train (MS)
-	# Resolution
-	("csize_embedder.mlp.0.weight", "adaln_single.emb.resolution_embedder.linear_1.weight"),
-	("csize_embedder.mlp.0.bias",   "adaln_single.emb.resolution_embedder.linear_1.bias"),
-	("csize_embedder.mlp.2.weight", "adaln_single.emb.resolution_embedder.linear_2.weight"),
-	("csize_embedder.mlp.2.bias",   "adaln_single.emb.resolution_embedder.linear_2.bias"),
-	# Aspect ratio
-	("ar_embedder.mlp.0.weight", "adaln_single.emb.aspect_ratio_embedder.linear_1.weight"),
-	("ar_embedder.mlp.0.bias",   "adaln_single.emb.aspect_ratio_embedder.linear_1.bias"),
-	("ar_embedder.mlp.2.weight", "adaln_single.emb.aspect_ratio_embedder.linear_2.weight"),
-	("ar_embedder.mlp.2.bias",   "adaln_single.emb.aspect_ratio_embedder.linear_2.bias"),
-]
 
 def get_depth(state_dict):
 	return sum(key.endswith('.attn1.to_k.bias') for key in state_dict.keys())
@@ -30,7 +18,7 @@ def get_lora_depth(state_dict):
 	return cnt
 
 def get_conversion_map(state_dict):
-	conversion_map = [  # main SD conversion map (PixArt reference, HF Diffusers)
+	conversion_map = [  # main SD conversion map (Sana reference, HF Diffusers)
 		# Patch embeddings
 		("x_embedder.proj.weight", "pos_embed.proj.weight"),
 		("x_embedder.proj.bias", "pos_embed.proj.bias"),
@@ -82,10 +70,7 @@ def find_prefix(state_dict, target_key):
 	return prefix
 
 def convert_state_dict(state_dict):
-	if "adaln_single.emb.resolution_embedder.linear_1.weight" in state_dict.keys():
-		cmap = get_conversion_map(state_dict) + conversion_map_ms
-	else:
-		cmap = get_conversion_map(state_dict)
+	cmap = get_conversion_map(state_dict)
 
 	missing = [k for k,v in cmap if v not in state_dict]
 	new_state_dict = {k: state_dict[v] for k,v in cmap if k not in missing}
@@ -109,16 +94,17 @@ def convert_state_dict(state_dict):
 			matched += [key('q'), key('k'), key('v')]
 
 	if len(matched) < len(state_dict):
-		print(f"PixArt: UNET conversion has leftover keys! ({len(matched)} vs {len(state_dict)})")
+		print(f"Sana: UNET conversion has leftover keys! ({len(matched)} vs {len(state_dict)})")
 		print(list( set(state_dict.keys()) - set(matched) ))
 
 	if len(missing) > 0:
-		print(f"PixArt: UNET conversion has missing keys!")
+		print(f"Sana: UNET conversion has missing keys!")
 		print(missing)
 
 	return new_state_dict
 
 # Same as above but for LoRA weights:
+# TODO: Not used yet, need to support LoRA for Sana
 def convert_lora_state_dict(state_dict, peft=True):
 	# koyha
 	rep_ak = lambda x: x.replace(".weight", ".lora_down.weight")
@@ -137,18 +123,18 @@ def convert_lora_state_dict(state_dict, peft=True):
 		rep_pp = lambda x: x.replace(".", "_")[:-7] + ".alpha"
 
 		prefix = "lora_transformer_"
-		t5_marker = "lora_te_encoder"
-		t5_keys = []
+		gemma_marker = "lora_te_encoder"
+		gemma_keys = []
 		for key in list(state_dict.keys()):
 			if key.startswith(prefix):
 				state_dict[key[len(prefix):]] = state_dict.pop(key)
-			elif t5_marker in key:
-				t5_keys.append(state_dict.pop(key))
-		if len(t5_keys) > 0:
-			print(f"Text Encoder not supported for PixArt LoRA, ignoring {len(t5_keys)} keys")
+			elif gemma_marker in key:
+				gemma_keys.append(state_dict.pop(key))
+		if len(gemma_keys) > 0:
+			print(f"Text Encoder not supported for Sana LoRA, ignoring {len(gemma_keys)} keys")
 
 	cmap = []
-	cmap_unet = get_conversion_map(state_dict) + conversion_map_ms # todo: 512 model
+	cmap_unet = get_conversion_map(state_dict) # todo: 512 model
 	for k, v in cmap_unet:
 		if v.endswith(".weight"):
 			cmap.append((rep_ak(k), rep_ap(v)))
@@ -213,11 +199,11 @@ def convert_lora_state_dict(state_dict, peft=True):
 				pass
 
 	if len(matched) < len(state_dict):
-		print(f"PixArt: LoRA conversion has leftover keys! ({len(matched)} vs {len(state_dict)})")
+		print(f"Sana: LoRA conversion has leftover keys! ({len(matched)} vs {len(state_dict)})")
 		print(list( set(state_dict.keys()) - set(matched) ))
 
 	if len(missing) > 0:
-		print(f"PixArt: LoRA conversion has missing keys! (probably)")
+		print(f"Sana: LoRA conversion has missing keys! (probably)")
 		print(missing)
 
 	return new_state_dict

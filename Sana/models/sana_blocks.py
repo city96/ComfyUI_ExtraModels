@@ -16,10 +16,8 @@
 
 # This file is modified from https://github.com/PixArt-alpha/PixArt-sigma
 import math
-import os
 from typing import Optional
 
-import xformers.ops
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
