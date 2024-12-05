@@ -32,6 +32,9 @@ class EXVAE(comfy.sd.VAE):
 		elif model_conf["type"] == "MoVQ3":
 			from .models.movq3 import MoVQ
 			model = MoVQ(model_conf)
+		elif model_conf["type"] == "DCAE":
+			from .models.dcae import DCAE
+			model = DCAE(**model_conf)
 		else:
 			raise NotImplementedError(f"Unknown VAE type '{model_conf['type']}'")
 

@@ -155,5 +155,25 @@ vae_conf = {
 		"ch_mult"          : [1, 2, 2, 4],
 		"num_res_blocks"   : 2,
 		"attn_resolutions" : [32],
+    },
+    # DCAE configs
+    "dcae-f32c32-sana-1.0": {
+        "type"					: "DCAE",
+        "in_channels"			: 3,
+		"embed_scale"      		: 32,
+        "embed_dim"				: 32,
+        "encoder_block_type"	: ["ResBlock", "ResBlock", "ResBlock", "EViTS5GLU", "EViTS5GLU", "EViTS5GLU"],
+        "encoder_width_list"	: [128, 256, 512, 512, 1024, 1024],
+        "encoder_depth_list"	: [2, 2, 2, 3, 3, 3],
+        "encoder_norm"			: "rms2d",
+        "encoder_act"			: "silu",
+        "downsample_block_type"	: "Conv",
+        "decoder_block_type"	: ["ResBlock", "ResBlock", "ResBlock", "EViTS5GLU", "EViTS5GLU", "EViTS5GLU"],
+        "decoder_width_list"	: [128, 256, 512, 512, 1024, 1024],
+        "decoder_depth_list"	: [3, 3, 3, 3, 3, 3],
+        "decoder_norm"			: "rms2d", 
+        "decoder_act"			: "silu",
+        "upsample_block_type"	: "InterpolateConv",
+        "scaling_factor"		: 0.41407
     }
 }
