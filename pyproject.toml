@@ -1,0 +1,15 @@
+[project]
+name = "comfyui_extramodels"
+description = "This extension aims to add support for various random image diffusion models to ComfyUI."
+version = "1.0.0"
+license = "LICENSE"
+dependencies = ["timm>=0.6.13", "sentencepiece>=0.1.97", "transformers>=4.34.1", "accelerate>=0.23.0", "einops>=0.6.0"]
+
+[project.urls]
+Repository = "https://github.com/city96/ComfyUI_ExtraModels"
+#  Used by Comfy Registry https://comfyregistry.org
+
+[tool.comfy]
+PublisherId = ""
+DisplayName = "ComfyUI_ExtraModels"
+Icon = ""
