@@ -22,10 +22,6 @@ else:
     from .PixArt.nodes import NODE_CLASS_MAPPINGS as PixArt_Nodes
     NODE_CLASS_MAPPINGS.update(PixArt_Nodes)
 
-    # HYDiT
-    from .HunYuanDiT.nodes import NODE_CLASS_MAPPINGS as HunYuanDiT_Nodes
-    NODE_CLASS_MAPPINGS.update(HunYuanDiT_Nodes)
-
     # VAE
     from .VAE.nodes import NODE_CLASS_MAPPINGS as VAE_Nodes
     NODE_CLASS_MAPPINGS.update(VAE_Nodes)
