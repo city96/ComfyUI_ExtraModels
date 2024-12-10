@@ -93,8 +93,7 @@ def model_config_from_unet(sd):
                 config["pe_interpolation"] = 1
     model_config = PixArtConfig(config)
     model_config.unet_class = model_class
-    logging.info(f"Detected PixArt model as [{model_class}]")
-    logging.info(f"PixArt config:\n{config}")
+    logging.debug(f"PixArt config: {model_class}\n{config}")
     return model_config
 
 resolutions = {

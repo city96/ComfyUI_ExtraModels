@@ -19,14 +19,8 @@ class PixArtModel(comfy.model_base.BaseModel):
     def extra_conds(self, **kwargs):
         out = super().extra_conds(**kwargs)
 
-        img_hw = kwargs.get("img_hw", None)
-        if img_hw is not None:
-            out["img_hw"] = comfy.conds.CONDRegular(torch.tensor(img_hw))
-
-        aspect_ratio = kwargs.get("aspect_ratio", None)
-        if aspect_ratio is not None:
-            out["aspect_ratio"] = comfy.conds.CONDRegular(torch.tensor(aspect_ratio))
-
+        for name in ["width", "height", "aspect_ratio", "img_hw"]: # TODO: remove last one
+            out[name] = comfy.conds.CONDRegular(torch.tensor(name))
         return out
 
 def load_pixart_state_dict(sd, model_options={}):
@@ -49,7 +43,7 @@ def load_pixart_state_dict(sd, model_options={}):
     load_device = model_management.get_torch_device()
     offload_device = comfy.model_management.unet_offload_device()
 
-    dtype = model_options.get("dtype", torch.float16) # TODO: fix this
+    dtype = model_options.get("dtype", None)
     weight_dtype = comfy.utils.weight_dtype(sd)
     unet_weight_dtype = list(model_config.supported_inference_dtypes)
 
