@@ -15,8 +15,8 @@ from timm.models.layers import DropPath
 from timm.models.vision_transformer import Mlp
 
 from .utils import auto_grad_checkpoint, to_2tuple
-from .PixArt_blocks import t2i_modulate, CaptionEmbedder, AttentionKVCompress, MultiHeadCrossAttention, T2IFinalLayer, TimestepEmbedder, SizeEmbedder
-from .PixArt import PixArt, get_2d_sincos_pos_embed
+from .blocks import t2i_modulate, CaptionEmbedder, AttentionKVCompress, MultiHeadCrossAttention, T2IFinalLayer, TimestepEmbedder, SizeEmbedder
+from .pixart import PixArt, get_2d_sincos_pos_embed
 
 
 class PatchEmbed(nn.Module):
