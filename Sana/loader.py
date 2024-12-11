@@ -1,3 +1,4 @@
+import math
 import logging
 
 import comfy.utils
@@ -75,6 +76,12 @@ def model_config_from_unet(sd):
         "patch_size": 1,
     }
     config["depth"] = sum([key.endswith(".point_conv.conv.weight") for key in sd.keys()]) or 28
+
+    if "pos_embed" in sd:
+        config["input_size"] = int(math.sqrt(sd["pos_embed"].shape[1])) * config["patch_size"]
+    else:
+        # TODO: this isn't optimal though most models don't use it
+        config["use_pe"] = False
 
     if "x_embedder.proj.bias" in sd:
         config["hidden_size"] = sd["x_embedder.proj.bias"].shape[0]

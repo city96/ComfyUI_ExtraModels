@@ -34,7 +34,7 @@ from .sana_blocks import (
     t2i_modulate,
 )
 from .norms import RMSNorm
-from .utils import auto_grad_checkpoint, to_2tuple
+from .utils import to_2tuple
 
 
 class SanaBlock(nn.Module):
@@ -166,7 +166,7 @@ class Sana(nn.Module):
 
     def __init__(
         self,
-        input_size=32,
+        input_size=None,
         patch_size=1,
         in_channels=32,
         hidden_size=1152,
@@ -196,7 +196,7 @@ class Sana(nn.Module):
         **kwargs,
     ):
         super().__init__()
-        self.dtype = torch.float32
+        self.dtype = dtype
         self.pred_sigma = pred_sigma
         self.in_channels = in_channels
         self.out_channels = in_channels * 2 if pred_sigma else in_channels
@@ -215,10 +215,18 @@ class Sana(nn.Module):
             dtype=dtype, device=device, operations=operations
         )
         self.t_embedder = TimestepEmbedder(hidden_size, dtype=dtype, device=device, operations=operations)
+
+        if input_size is not None:
+            self.base_size = input_size // self.patch_size
+        else:
+            self.base_size = None
+
         num_patches = self.x_embedder.num_patches
-        self.base_size = input_size // self.patch_size
-        # Will use fixed sin-cos embedding:
-        self.register_buffer("pos_embed", torch.zeros(1, num_patches, hidden_size))
+        if self.use_pe and num_patches is not None:
+            #Will use fixed sin-cos embedding:
+            self.register_buffer("pos_embed", torch.zeros(1, num_patches, hidden_size))
+        else:
+            self.pos_embed = None
 
         approx_gelu = lambda: nn.GELU(approximate="tanh")
         self.t_block = nn.Sequential(
@@ -269,9 +277,9 @@ class Sana(nn.Module):
         y: (N, 1, 120, C) tensor of class labels
         """
         y = context # remap comfy cond name
-        pos_embed = self.pos_embed.to(x.dtype)
         self.h, self.w = x.shape[-2] // self.patch_size, x.shape[-1] // self.patch_size
         if self.use_pe:
+            pos_embed = self.pos_embed.to(x.dtype)
             x = self.x_embedder(x) + pos_embed  # (N, T, D), where T = H * W / patch_size ** 2
         else:
             x = self.x_embedder(x)
@@ -290,7 +298,7 @@ class Sana(nn.Module):
             y_lens = [y.shape[2]] * y.shape[0]
             y = y.squeeze(1).view(1, -1, x.shape[-1])
         for block in self.blocks:
-            x = auto_grad_checkpoint(block, x, y, t0, y_lens)  # (N, T, D) #support grad checkpoint
+            x = block(x, y, t0, y_lens) # (N, T, D)
         x = self.final_layer(x, t)  # (N, T, patch_size ** 2 * out_channels)
         x = self.unpatchify(x)  # (N, out_channels, H, W)
         return x

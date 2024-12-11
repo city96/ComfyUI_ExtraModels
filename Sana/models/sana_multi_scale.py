@@ -23,6 +23,7 @@ from .sana import Sana, get_2d_sincos_pos_embed
 from .sana_blocks import (
     Attention,
     CaptionEmbedder,
+    TimestepEmbedder,
     FlashAttention,
     LiteLA,
     MultiHeadCrossAttention,
@@ -30,8 +31,7 @@ from .sana_blocks import (
     T2IFinalLayer,
     t2i_modulate,
 )
-from .utils import auto_grad_checkpoint
-
+from .norms import RMSNorm
 
 class SanaMSBlock(nn.Module):
     """
@@ -195,44 +195,33 @@ class SanaMS(Sana):
         operations=None,
         **kwargs,
     ):
-        super().__init__(
-            input_size=input_size,
-            patch_size=patch_size,
-            in_channels=in_channels,
-            hidden_size=hidden_size,
-            depth=depth,
-            num_heads=num_heads,
-            mlp_ratio=mlp_ratio,
-            class_dropout_prob=class_dropout_prob,
-            learn_sigma=learn_sigma,
-            pred_sigma=pred_sigma,
-            drop_path=drop_path,
-            caption_channels=caption_channels,
-            pe_interpolation=pe_interpolation,
-            config=config,
-            model_max_length=model_max_length,
-            qk_norm=qk_norm,
-            y_norm=y_norm,
-            norm_eps=norm_eps,
-            attn_type=attn_type,
-            ffn_type=ffn_type,
-            use_pe=use_pe,
-            y_norm_scale_factor=y_norm_scale_factor,
-            patch_embed_kernel=patch_embed_kernel,
-            mlp_acts=mlp_acts,
-            linear_head_dim=linear_head_dim,
-            dtype=dtype,
-            device=device,
-            operations=operations,
-            **kwargs,
-        )
+        nn.Module.__init__(self)
         self.dtype = dtype
+        self.pred_sigma = pred_sigma
+        self.in_channels = in_channels
+        self.out_channels = in_channels * 2 if pred_sigma else in_channels
+        self.patch_size = patch_size
+        self.num_heads = num_heads
+        self.pe_interpolation = pe_interpolation
+        self.depth = depth
+        self.use_pe = use_pe
+        self.y_norm = y_norm
+        self.model_max_length = model_max_length
+        self.fp32_attention = kwargs.get("use_fp32_attention", False)
         self.h = self.w = 0
+
         approx_gelu = lambda: nn.GELU(approximate="tanh")
         self.t_block = nn.Sequential(
             nn.SiLU(), operations.Linear(hidden_size, 6 * hidden_size, bias=True, dtype=dtype, device=device)
         )
+
+        self.t_embedder = TimestepEmbedder(hidden_size, dtype=dtype, device=device, operations=operations)
+
         self.pos_embed_ms = None
+        if input_size is not None:
+            self.base_size = input_size // self.patch_size
+        else:
+            self.base_size = None
 
         kernel_size = patch_embed_kernel or patch_size
         self.x_embedder = PatchEmbedMS(
@@ -249,6 +238,9 @@ class SanaMS(Sana):
             device=device,
             operations=operations,
         )
+        if self.y_norm:
+            self.attention_y_norm = RMSNorm(hidden_size, scale_factor=y_norm_scale_factor, eps=norm_eps)
+        
         drop_path = [x.item() for x in torch.linspace(0, drop_path, depth)]  # stochastic depth decay rule
         self.blocks = nn.ModuleList(
             [
