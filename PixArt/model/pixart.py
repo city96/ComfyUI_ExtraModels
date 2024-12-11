@@ -8,17 +8,23 @@
 # GLIDE: https://github.com/openai/glide-text2im
 # MAE: https://github.com/facebookresearch/mae/blob/main/models_mae.py
 # --------------------------------------------------------
-import math
 import torch
 import torch.nn as nn
-import os
 import numpy as np
-from timm.models.layers import DropPath
-from timm.models.vision_transformer import PatchEmbed, Mlp
-
 
 from .utils import auto_grad_checkpoint, to_2tuple
-from .blocks import t2i_modulate, CaptionEmbedder, AttentionKVCompress, MultiHeadCrossAttention, T2IFinalLayer, TimestepEmbedder, LabelEmbedder, FinalLayer
+from .blocks import (
+    t2i_modulate,
+    CaptionEmbedder,
+    AttentionKVCompress,
+    MultiHeadCrossAttention,
+    T2IFinalLayer,
+    TimestepEmbedder,
+    LabelEmbedder,
+    FinalLayer,
+    Mlp
+)
+from comfy.ldm.modules.diffusionmodules.mmdit import PatchEmbed
 
 
 class PixArtBlock(nn.Module):
@@ -37,7 +43,7 @@ class PixArtBlock(nn.Module):
         # to be compatible with lower version pytorch
         approx_gelu = lambda: nn.GELU(approximate="tanh")
         self.mlp = Mlp(in_features=hidden_size, hidden_features=int(hidden_size * mlp_ratio), act_layer=approx_gelu, drop=0)
-        self.drop_path = DropPath(drop_path) if drop_path > 0. else nn.Identity()
+        self.drop_path = nn.Identity() #DropPath(drop_path) if drop_path > 0. else nn.Identity()
         self.scale_shift_table = nn.Parameter(torch.randn(6, hidden_size) / hidden_size ** 0.5)
         self.sampling = sampling
         self.sr_ratio = sr_ratio
