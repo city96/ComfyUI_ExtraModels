@@ -1,27 +1,13 @@
-import comfy.supported_models_base
-import comfy.latent_formats
-import comfy.model_detection
-import comfy.model_patcher
-import comfy.model_base
-import comfy.utils
-import comfy.conds
 import logging
-import torch
 
+import comfy.utils
+import comfy.model_base
+import comfy.model_patcher
+import comfy.model_detection
 from comfy import model_management
+
 from .diffusers_convert import convert_state_dict
 from .config import model_config_from_unet
-
-class PixArtModel(comfy.model_base.BaseModel):
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-    
-    def extra_conds(self, **kwargs):
-        out = super().extra_conds(**kwargs)
-
-        for name in ["width", "height", "aspect_ratio", "img_hw"]: # TODO: remove last one
-            out[name] = comfy.conds.CONDRegular(torch.tensor(name))
-        return out
 
 def load_pixart_state_dict(sd, model_options={}):
     # prefix / format

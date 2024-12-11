@@ -1,12 +1,10 @@
-"""
-Model config and setting logic
-"""
 import math
 import logging
 
 import comfy.supported_models_base
 import comfy.supported_models
 import comfy.latent_formats
+import comfy.model_base
 
 from .model.pixart import PixArt
 from .model.pixartms import PixArtMS
