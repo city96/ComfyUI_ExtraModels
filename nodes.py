@@ -2,9 +2,11 @@ import folder_paths
 import comfy.utils
 
 from .PixArt.loader import load_pixart_state_dict
+from .Sana.loader import load_sana_state_dict
 
 loaders = {
     "PixArt": load_pixart_state_dict,
+    "Sana": load_sana_state_dict,
 }
 
 class EXMUnetLoader:

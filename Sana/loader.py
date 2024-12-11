@@ -1,100 +1,104 @@
-import comfy.supported_models_base
-import comfy.latent_formats
-import comfy.model_patcher
-import comfy.model_base
+import logging
+
 import comfy.utils
-import comfy.conds
-import torch
-import math 
-from comfy import model_management
-from comfy.latent_formats import LatentFormat
+import comfy.model_base
+import comfy.model_detection
+
+import comfy.supported_models_base
+import comfy.supported_models
+import comfy.latent_formats
+
+from .models.sana import Sana
+from .models.sana_multi_scale import SanaMS
 from .diffusers_convert import convert_state_dict
+from ..utils.loader import load_state_dict_from_config
 
-
-class SanaLatent(LatentFormat):
+class SanaLatent(comfy.latent_formats.LatentFormat):
+    scale_factor = 0.41407
     latent_channels = 32
-    def __init__(self):
-        self.scale_factor = 0.41407
 
+class SanaConfig(comfy.supported_models_base.BASE):
+    unet_class = SanaMS
+    unet_config = {}
+    unet_extra_config = {}
 
-class EXM_Sana(comfy.supported_models_base.BASE):
-	unet_config = {}
-	unet_extra_config = {}
-	latent_format = SanaLatent
+    latent_format = SanaLatent
+    sampling_settings = {
+        "shift": 3.0,
+    }
 
-	def __init__(self, model_conf):
-		self.model_target = model_conf.get("target")
-		self.unet_config = model_conf.get("unet_config", {})
-		self.sampling_settings = model_conf.get("sampling_settings", {})
-		self.latent_format = self.latent_format()
-		# UNET is handled by extension
-		self.unet_config["disable_unet_model_creation"] = True
+    def model_type(self, state_dict, prefix=""):
+        return comfy.model_base.ModelType.FLOW
 
-	def model_type(self, state_dict, prefix=""):
-		return comfy.model_base.ModelType.FLOW
+    def get_model(self, state_dict, prefix="", device=None):
+        return SanaModel(
+            model_config=self,
+            model_type=comfy.model_base.ModelType.FLOW,
+            unet_model=self.unet_class,
+            device=device
+        )
 
+class SanaModel(comfy.model_base.BaseModel):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
 
-class EXM_Sana_Model(comfy.model_base.BaseModel):
-	def __init__(self, *args, **kwargs):
-		super().__init__(*args, **kwargs)
-	
-	def extra_conds(self, **kwargs):
-		out = super().extra_conds(**kwargs)
+def load_sana_state_dict(sd, model_options={}):
+    # prefix / format
+    sd = sd.get("model", sd) # ref ckpt
+    diffusion_model_prefix = comfy.model_detection.unet_prefix_from_state_dict(sd)
+    temp_sd = comfy.utils.state_dict_prefix_replace(sd, {diffusion_model_prefix: ""}, filter_keys=True)
+    if len(temp_sd) > 0:
+        sd = temp_sd
 
-		cn_hint = kwargs.get("cn_hint", None)
-		if cn_hint is not None:
-			out["cn_hint"] = comfy.conds.CONDRegular(cn_hint)
+    # diffusers convert
+    if "adaln_single.linear.weight" in sd:
+        sd = convert_state_dict(sd)
 
-		return out
+    # model config
+    model_config = model_config_from_unet(sd)
+    return load_state_dict_from_config(model_config, sd, model_options)
 
+def model_config_from_unet(sd):
+    """
+    Guess config based on (converted) state dict.
+    """
+    # shared settings that match between all models
+    # TODO: some can (should) be enumerated
+    config = {
+        "in_channels": 32,
+        "linear_head_dim": 32,
+        "model_max_length": 300,
+        "y_norm": True,
+        "attn_type": "linear",
+        "ffn_type": "glumbconv",
+        "mlp_ratio": 2.5,
+        "mlp_acts": ["silu", "silu", None],
+        "use_pe": False,
+        "pred_sigma": False,
+        "learn_sigma": False,
+        "fp32_attention": True,
+        "patch_size": 1,
+    }
+    config["depth"] = sum([key.endswith(".point_conv.conv.weight") for key in sd.keys()]) or 28
 
-def load_sana(model_path, model_conf):
-	state_dict = comfy.utils.load_torch_file(model_path)
-	state_dict = state_dict.get("model", state_dict)
+    if "x_embedder.proj.bias" in sd:
+        config["hidden_size"] = sd["x_embedder.proj.bias"].shape[0]
+    
+    if config["hidden_size"] == 1152:
+        config["num_heads"] = 16
+    elif config["hidden_size"] == 2240:
+        config["num_heads"] = 20
+    else:
+        raise RuntimeError(f"Unknown model config.")
+    
+    model_config = SanaConfig(config)
+    logging.debug(f"Sana config:\n{config}")
+    return model_config
 
-	# prefix
-	for prefix in ["model.diffusion_model.",]:
-		if any(True for x in state_dict if x.startswith(prefix)):
-			state_dict = {k[len(prefix):]:v for k,v in state_dict.items()}
-
-	# diffusers
-	if "adaln_single.linear.weight" in state_dict:
-		state_dict = convert_state_dict(state_dict) # Diffusers
-
-	parameters = comfy.utils.calculate_parameters(state_dict)
-	unet_dtype = comfy.model_management.unet_dtype()
-	load_device = comfy.model_management.get_torch_device()
-	offload_device = comfy.model_management.unet_offload_device()
-
-	# ignore fp8/etc and use directly for now
-	manual_cast_dtype = model_management.unet_manual_cast(unet_dtype, load_device)
-	if manual_cast_dtype:
-		print(f"Sana: falling back to {manual_cast_dtype}")
-		unet_dtype = manual_cast_dtype
-
-	model_conf = EXM_Sana(model_conf) # convert to object
-	model = EXM_Sana_Model( # same as comfy.model_base.BaseModel
-		model_conf,
-		model_type=comfy.model_base.ModelType.FLOW,
-		device=model_management.get_torch_device()
-	)
-
-	if model_conf.model_target == "SanaMS":
-		from .models.sana_multi_scale import SanaMS
-		model.diffusion_model = SanaMS(**model_conf.unet_config)
-	else:
-		raise NotImplementedError(f"Unknown model target '{model_conf.model_target}'")
-
-	m, u = model.diffusion_model.load_state_dict(state_dict, strict=False)
-	if len(m) > 0: print("Missing UNET keys", m)
-	if len(u) > 0: print("Leftover UNET keys", u)
-	model.diffusion_model.dtype = unet_dtype
-	model.diffusion_model.eval()
-	model.diffusion_model.to(unet_dtype)
-
-	model_patcher = comfy.model_patcher.ModelPatcher(
-		model,
-		load_device = load_device,
-		offload_device = offload_device,
-	)
-	return model_patcher
+# 512/1024/2K match, TODO: 4K is new, add on release
+from ..PixArt.loader import resolutions as pixart_res
+resolutions = {
+    "Sana 512": pixart_res["PixArt 512"],
+    "Sana 1024": pixart_res["PixArt 1024"],
+    "Sana 2K": pixart_res["PixArt 2K"],
+}
