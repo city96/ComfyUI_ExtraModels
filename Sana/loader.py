@@ -31,16 +31,11 @@ class SanaConfig(comfy.supported_models_base.BASE):
         return comfy.model_base.ModelType.FLOW
 
     def get_model(self, state_dict, prefix="", device=None):
-        return SanaModel(
-            model_config=self,
-            model_type=comfy.model_base.ModelType.FLOW,
-            unet_model=self.unet_class,
-            device=device
-        )
+        return SanaModel(model_config=self, unet_model=self.unet_class, device=device)
 
 class SanaModel(comfy.model_base.BaseModel):
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
+    def __init__(self, *args, model_type=comfy.model_base.ModelType.FLOW, unet_model=SanaMS, **kwargs):
+        super().__init__(*args, model_type=model_type, unet_model=unet_model, **kwargs)
 
 def load_sana_state_dict(sd, model_options={}):
     # prefix / format
