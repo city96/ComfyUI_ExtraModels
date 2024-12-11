@@ -28,6 +28,8 @@ from .norms import RMSNorm
 from .utils import get_same_padding, to_2tuple
 from .basic_modules import Mlp
 
+import comfy.ldm.common_dit
+
 sdpa_32b = None
 Q_4GB_LIMIT = 32000000
 """If q is greater than this, the operation will likely require >4GB VRAM, which will fail on Intel Arc Alchemist GPUs without a workaround."""
@@ -780,6 +782,8 @@ class PatchEmbed(nn.Module):
         norm_layer=None,
         flatten=True,
         bias=True,
+        dynamic_img_pad=True,
+        padding_mode='circular',
         dtype=None,
         device=None,
         operations=None,
@@ -788,11 +792,20 @@ class PatchEmbed(nn.Module):
         kernel_size = kernel_size or patch_size
         img_size = to_2tuple(img_size)
         patch_size = to_2tuple(patch_size)
-        self.img_size = img_size
         self.patch_size = patch_size
-        self.grid_size = (img_size[0] // patch_size[0], img_size[1] // patch_size[1])
-        self.num_patches = self.grid_size[0] * self.grid_size[1]
+
+        if img_size is not None and False:
+            self.img_size = img_size
+            self.grid_size = (img_size[0] // patch_size[0], img_size[1] // patch_size[1])
+            self.num_patches = self.grid_size[0] * self.grid_size[1]
+        else:
+            self.img_size = None
+            self.grid_size = None
+            self.num_patches = None
+        
         self.flatten = flatten
+        self.dynamic_img_pad = dynamic_img_pad
+        self.padding_mode = padding_mode
         if not padding and kernel_size % 2 > 0:
             padding = get_same_padding(kernel_size)
         self.proj = operations.Conv2d(
@@ -802,11 +815,13 @@ class PatchEmbed(nn.Module):
 
     def forward(self, x):
         B, C, H, W = x.shape
-        assert (H == self.img_size[0], f"Input image height ({H}) doesn't match model ({self.img_size[0]}).")
-        assert (W == self.img_size[1], f"Input image width ({W}) doesn't match model ({self.img_size[1]}).")
+        # assert (H == self.img_size[0], f"Input image height ({H}) doesn't match model ({self.img_size[0]}).")
+        # assert (W == self.img_size[1], f"Input image width ({W}) doesn't match model ({self.img_size[1]}).")
+        if self.dynamic_img_pad:
+            x = comfy.ldm.common_dit.pad_to_patch_size(x, self.patch_size, padding_mode=self.padding_mode)
         x = self.proj(x)
         if self.flatten:
-            x = x.flatten(2).transpose(1, 2)  # BCHW -> BNC
+            x = x.flatten(2).transpose(1, 2) # BCHW -> BNC
         x = self.norm(x)
         return x
 
@@ -824,6 +839,8 @@ class PatchEmbedMS(nn.Module):
         norm_layer=None,
         flatten=True,
         bias=True,
+        dynamic_img_pad=True,
+        padding_mode='circular',
         dtype=None,
         device=None,
         operations=None,
@@ -833,6 +850,8 @@ class PatchEmbedMS(nn.Module):
         patch_size = to_2tuple(patch_size)
         self.patch_size = patch_size
         self.flatten = flatten
+        self.dynamic_img_pad = dynamic_img_pad
+        self.padding_mode = padding_mode
         if not padding and kernel_size % 2 > 0:
             padding = get_same_padding(kernel_size)
         self.proj = operations.Conv2d(
@@ -841,6 +860,8 @@ class PatchEmbedMS(nn.Module):
         self.norm = norm_layer(embed_dim) if norm_layer else nn.Identity()
 
     def forward(self, x):
+        if self.dynamic_img_pad:
+            x = comfy.ldm.common_dit.pad_to_patch_size(x, self.patch_size, padding_mode=self.padding_mode)
         x = self.proj(x)
         if self.flatten:
             x = x.flatten(2).transpose(1, 2)  # BCHW -> BNC
