@@ -22,12 +22,13 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 from einops import rearrange
-from timm.models.vision_transformer import Attention as Attention_
-from timm.models.vision_transformer import Mlp
 from transformers import AutoModelForCausalLM
 
 from .norms import RMSNorm
 from .utils import get_same_padding, to_2tuple
+from .basic_modules import Mlp
+
+import comfy.ldm.common_dit
 
 sdpa_32b = None
 Q_4GB_LIMIT = 32000000
@@ -38,11 +39,14 @@ Q_4GB_LIMIT = 32000000
 
 from comfy import model_management
 if model_management.xformers_enabled():
-    import xformers
     import xformers.ops
+    if int((xformers.__version__).split(".")[2]) >= 28:
+        block_diagonal_mask_from_seqlens = xformers.ops.fmha.attn_bias.BlockDiagonalMask.from_seqlens
+    else:
+        block_diagonal_mask_from_seqlens = xformers.ops.fmha.BlockDiagonalMask.from_seqlens
 else:
     if model_management.xpu_available:
-        import intel_extension_for_pytorch as ipex
+        import intel_extension_for_pytorch as ipex # type: ignore
         import os
         if not torch.xpu.has_fp64_dtype() and not os.environ.get('IPEX_FORCE_ATTENTION_SLICE', None):
             from ...utils.IPEX.attention import scaled_dot_product_attention_32_bit
@@ -61,7 +65,7 @@ def t2i_modulate(x, shift, scale):
 
 
 class MultiHeadCrossAttention(nn.Module):
-    def __init__(self, d_model, num_heads, attn_drop=0.0, proj_drop=0.0, qk_norm=False, **block_kwargs):
+    def __init__(self, d_model, num_heads, attn_drop=0.0, proj_drop=0.0, qk_norm=False, dtype=None, device=None, operations=None, **block_kwargs):
         super().__init__()
         assert d_model % num_heads == 0, "d_model must be divisible by num_heads"
 
@@ -69,10 +73,10 @@ class MultiHeadCrossAttention(nn.Module):
         self.num_heads = num_heads
         self.head_dim = d_model // num_heads
 
-        self.q_linear = nn.Linear(d_model, d_model)
-        self.kv_linear = nn.Linear(d_model, d_model * 2)
+        self.q_linear = operations.Linear(d_model, d_model, dtype=dtype, device=device)
+        self.kv_linear = operations.Linear(d_model, d_model * 2, dtype=dtype, device=device)
         self.attn_drop = nn.Dropout(attn_drop)
-        self.proj = nn.Linear(d_model, d_model)
+        self.proj = operations.Linear(d_model, d_model, dtype=dtype, device=device)
         self.proj_drop = nn.Dropout(proj_drop)
         if qk_norm:
             # not used for now
@@ -93,7 +97,7 @@ class MultiHeadCrossAttention(nn.Module):
         if model_management.xformers_enabled():
             attn_bias = None
             if mask is not None:
-                attn_bias = xformers.ops.fmha.BlockDiagonalMask.from_seqlens([N] * B, mask)
+                attn_bias = block_diagonal_mask_from_seqlens([N] * B, mask)
             x = xformers.ops.memory_efficient_attention(
                 q, k, v,
                 p=self.attn_drop.p,
@@ -135,7 +139,7 @@ class MultiHeadCrossAttention(nn.Module):
         return x
 
 
-class LiteLA(Attention_):
+class LiteLA(torch.nn.Module): # from attention
     r"""Lightweight linear attention"""
 
     PAD_VAL = 1
@@ -151,9 +155,20 @@ class LiteLA(Attention_):
         use_bias=False,
         qk_norm=False,
         norm_eps=1e-5,
+        dtype=None,
+        device=None,
+        operations=None,
     ):
+        super().__init__()
         heads = heads or int(out_dim // dim * heads_ratio)
-        super().__init__(in_dim, num_heads=heads, qkv_bias=use_bias)
+
+        # assert dim % heads == 0, 'dim should be divisible by num_heads'
+        self.num_heads = heads
+        self.head_dim = in_dim // heads
+        self.scale = self.head_dim ** -0.5
+
+        self.qkv = operations.Linear(in_dim, in_dim * 3, bias=use_bias, dtype=dtype, device=device)
+        self.proj = operations.Linear(in_dim, in_dim, dtype=dtype, device=device)
 
         self.in_dim = in_dim
         self.out_dim = out_dim
@@ -346,7 +361,7 @@ class SelfAttnProcessorLiteLA:
         return out
 
 
-class FlashAttention(Attention_):
+class FlashAttention(torch.nn.Module): # from attention
     """Multi-head Flash Attention block with qk norm."""
 
     def __init__(
@@ -395,7 +410,7 @@ class FlashAttention(Attention_):
             attn_bias = torch.zeros([B * self.num_heads, q.shape[1], k.shape[1]], dtype=q.dtype, device=q.device)
             attn_bias.masked_fill_(mask.squeeze(1).repeat(self.num_heads, 1, 1) == 0, float("-inf"))
 
-        if _xformers_available:
+        if model_management.xformers_enabled():
             x = xformers.ops.memory_efficient_attention(q, k, v, p=self.attn_drop.p, attn_bias=attn_bias)
         else:
             q, k, v = q.transpose(1, 2), k.transpose(1, 2), v.transpose(1, 2)
@@ -418,7 +433,31 @@ class FlashAttention(Attention_):
 #################################################################################
 #   AMP attention with fp32 softmax to fix loss NaN problem during training     #
 #################################################################################
-class Attention(Attention_):
+class Attention(torch.nn.Module):
+    def __init__(
+        self,
+        dim,
+        num_heads=8,
+        qkv_bias=True,
+        sampling='conv',
+        sr_ratio=1,
+        qk_norm=False,
+        dtype=None,
+        device=None,
+        operations=None,
+        **block_kwargs,
+    ):
+        super().__init__()
+        assert dim % num_heads == 0, 'dim should be divisible by num_heads'
+        self.num_heads = num_heads
+        self.head_dim = dim // num_heads
+        self.scale = self.head_dim ** -0.5
+
+        self.qkv = operations.Linear(dim, dim * 3, bias=qkv_bias, dtype=dtype, device=device)
+        self.q_norm = nn.Identity()
+        self.k_norm = nn.Identity()
+        self.proj = operations.Linear(dim, dim, dtype=dtype, device=device)
+
     def forward(self, x, HW=None):
         B, N, C = x.shape
         qkv = self.qkv(x).reshape(B, N, 3, self.num_heads, C // self.num_heads).permute(2, 0, 3, 1, 4)
@@ -432,11 +471,11 @@ class Attention(Attention_):
             attn = (q @ k.transpose(-2, -1)) * self.scale
             attn = attn.softmax(dim=-1)
 
-        attn = self.attn_drop(attn)
+        #attn = self.attn_drop(attn)
 
         x = (attn @ v).transpose(1, 2).reshape(B, N, C)
         x = self.proj(x)
-        x = self.proj_drop(x)
+        #x = self.proj_drop(x)
         return x
 
 
@@ -445,11 +484,14 @@ class FinalLayer(nn.Module):
     The final layer of Sana.
     """
 
-    def __init__(self, hidden_size, patch_size, out_channels):
+    def __init__(self, hidden_size, patch_size, out_channels, dtype=None, device=None, operations=None):
         super().__init__()
-        self.norm_final = nn.LayerNorm(hidden_size, elementwise_affine=False, eps=1e-6)
-        self.linear = nn.Linear(hidden_size, patch_size * patch_size * out_channels, bias=True)
-        self.adaLN_modulation = nn.Sequential(nn.SiLU(), nn.Linear(hidden_size, 2 * hidden_size, bias=True))
+        self.norm_final = operations.LayerNorm(hidden_size, elementwise_affine=False, eps=1e-6, dtype=dtype, device=device)
+        self.linear = operations.Linear(hidden_size, patch_size * patch_size * out_channels, bias=True, dtype=dtype, device=device)
+        self.adaLN_modulation = nn.Sequential(
+            nn.SiLU(),
+            operations.Linear(hidden_size, 2 * hidden_size, bias=True, dtype=dtype, device=device)
+        )
 
     def forward(self, x, c):
         shift, scale = self.adaLN_modulation(c).chunk(2, dim=1)
@@ -463,17 +505,18 @@ class T2IFinalLayer(nn.Module):
     The final layer of Sana.
     """
 
-    def __init__(self, hidden_size, patch_size, out_channels):
+    def __init__(self, hidden_size, patch_size, out_channels, dtype=None, device=None, operations=None):
         super().__init__()
-        self.norm_final = nn.LayerNorm(hidden_size, elementwise_affine=False, eps=1e-6)
-        self.linear = nn.Linear(hidden_size, patch_size * patch_size * out_channels, bias=True)
-        self.scale_shift_table = nn.Parameter(torch.randn(2, hidden_size) / hidden_size**0.5)
+        self.norm_final = operations.LayerNorm(hidden_size, elementwise_affine=False, eps=1e-6, dtype=dtype, device=device)
+        self.linear = operations.Linear(hidden_size, patch_size * patch_size * out_channels, bias=True, dtype=dtype, device=device)
+        self.scale_shift_table = nn.Parameter(torch.randn(2, hidden_size) / hidden_size ** 0.5)
         self.out_channels = out_channels
 
     def forward(self, x, t):
+        dtype = x.dtype
         shift, scale = (self.scale_shift_table[None] + t[:, None]).chunk(2, dim=1)
         x = t2i_modulate(self.norm_final(x), shift, scale)
-        x = self.linear(x)
+        x = self.linear(x.to(dtype))
         return x
 
 
@@ -482,12 +525,14 @@ class MaskFinalLayer(nn.Module):
     The final layer of Sana.
     """
 
-    def __init__(self, final_hidden_size, c_emb_size, patch_size, out_channels):
+    def __init__(self, final_hidden_size, c_emb_size, patch_size, out_channels, dtype=None, device=None, operations=None):
         super().__init__()
-        self.norm_final = nn.LayerNorm(final_hidden_size, elementwise_affine=False, eps=1e-6)
-        self.linear = nn.Linear(final_hidden_size, patch_size * patch_size * out_channels, bias=True)
-        self.adaLN_modulation = nn.Sequential(nn.SiLU(), nn.Linear(c_emb_size, 2 * final_hidden_size, bias=True))
-
+        self.norm_final = operations.LayerNorm(final_hidden_size, elementwise_affine=False, eps=1e-6, dtype=dtype, device=device)
+        self.linear = operations.Linear(final_hidden_size, patch_size * patch_size * out_channels, bias=True, dtype=dtype, device=device)
+        self.adaLN_modulation = nn.Sequential(
+            nn.SiLU(),
+            operations.Linear(c_emb_size, 2 * final_hidden_size, bias=True, dtype=dtype, device=device)
+        )
     def forward(self, x, t):
         shift, scale = self.adaLN_modulation(t).chunk(2, dim=1)
         x = modulate(self.norm_final(x), shift, scale)
@@ -500,12 +545,14 @@ class DecoderLayer(nn.Module):
     The final layer of Sana.
     """
 
-    def __init__(self, hidden_size, decoder_hidden_size):
+    def __init__(self, hidden_size, decoder_hidden_size, dtype=None, device=None, operations=None):
         super().__init__()
-        self.norm_decoder = nn.LayerNorm(hidden_size, elementwise_affine=False, eps=1e-6)
-        self.linear = nn.Linear(hidden_size, decoder_hidden_size, bias=True)
-        self.adaLN_modulation = nn.Sequential(nn.SiLU(), nn.Linear(hidden_size, 2 * hidden_size, bias=True))
-
+        self.norm_decoder = operations.LayerNorm(hidden_size, elementwise_affine=False, eps=1e-6, dtype=dtype, device=device)
+        self.linear = operations.Linear(hidden_size, decoder_hidden_size, bias=True, dtype=dtype, device=device)
+        self.adaLN_modulation = nn.Sequential(
+            nn.SiLU(),
+            operations.Linear(hidden_size, 2 * hidden_size, bias=True, dtype=dtype, device=device)
+        )
     def forward(self, x, t):
         shift, scale = self.adaLN_modulation(t).chunk(2, dim=1)
         x = modulate(self.norm_decoder(x), shift, scale)
@@ -521,12 +568,12 @@ class TimestepEmbedder(nn.Module):
     Embeds scalar timesteps into vector representations.
     """
 
-    def __init__(self, hidden_size, frequency_embedding_size=256):
+    def __init__(self, hidden_size, frequency_embedding_size=256, dtype=None, device=None, operations=None):
         super().__init__()
         self.mlp = nn.Sequential(
-            nn.Linear(frequency_embedding_size, hidden_size, bias=True),
+            operations.Linear(frequency_embedding_size, hidden_size, bias=True, dtype=dtype, device=device),
             nn.SiLU(),
-            nn.Linear(hidden_size, hidden_size, bias=True),
+            operations.Linear(hidden_size, hidden_size, bias=True, dtype=dtype, device=device),
         )
         self.frequency_embedding_size = frequency_embedding_size
 
@@ -551,9 +598,9 @@ class TimestepEmbedder(nn.Module):
             embedding = torch.cat([embedding, torch.zeros_like(embedding[:, :1])], dim=-1)
         return embedding
 
-    def forward(self, t):
-        t_freq = self.timestep_embedding(t, self.frequency_embedding_size).to(self.dtype)
-        t_emb = self.mlp(t_freq)
+    def forward(self, t, dtype):
+        t_freq = self.timestep_embedding(t, self.frequency_embedding_size)
+        t_emb = self.mlp(t_freq.to(dtype))
         return t_emb
 
     @property
@@ -644,10 +691,14 @@ class CaptionEmbedder(nn.Module):
         uncond_prob,
         act_layer=nn.GELU(approximate="tanh"),
         token_num=120,
+        dtype=None,
+        device=None,
+        operations=None,
     ):
         super().__init__()
         self.y_proj = Mlp(
-            in_features=in_channels, hidden_features=hidden_size, out_features=hidden_size, act_layer=act_layer, drop=0
+            in_features=in_channels, hidden_features=hidden_size, out_features=hidden_size, act_layer=act_layer, drop=0,
+            dtype=dtype, device=device, operations=operations
         )
         self.register_buffer("y_embedding", nn.Parameter(torch.randn(token_num, in_channels) / in_channels**0.5))
         self.uncond_prob = uncond_prob
@@ -734,30 +785,46 @@ class PatchEmbed(nn.Module):
         norm_layer=None,
         flatten=True,
         bias=True,
+        dynamic_img_pad=True,
+        padding_mode='circular',
+        dtype=None,
+        device=None,
+        operations=None,
     ):
         super().__init__()
         kernel_size = kernel_size or patch_size
         img_size = to_2tuple(img_size)
         patch_size = to_2tuple(patch_size)
-        self.img_size = img_size
         self.patch_size = patch_size
-        self.grid_size = (img_size[0] // patch_size[0], img_size[1] // patch_size[1])
-        self.num_patches = self.grid_size[0] * self.grid_size[1]
+
+        if img_size is not None and False:
+            self.img_size = img_size
+            self.grid_size = (img_size[0] // patch_size[0], img_size[1] // patch_size[1])
+            self.num_patches = self.grid_size[0] * self.grid_size[1]
+        else:
+            self.img_size = None
+            self.grid_size = None
+            self.num_patches = None
+        
         self.flatten = flatten
+        self.dynamic_img_pad = dynamic_img_pad
+        self.padding_mode = padding_mode
         if not padding and kernel_size % 2 > 0:
             padding = get_same_padding(kernel_size)
-        self.proj = nn.Conv2d(
-            in_chans, embed_dim, kernel_size=kernel_size, stride=patch_size, padding=padding, bias=bias
+        self.proj = operations.Conv2d(
+            in_chans, embed_dim, kernel_size=kernel_size, stride=patch_size, padding=padding, bias=bias, dtype=dtype, device=device
         )
         self.norm = norm_layer(embed_dim) if norm_layer else nn.Identity()
 
     def forward(self, x):
         B, C, H, W = x.shape
-        assert (H == self.img_size[0], f"Input image height ({H}) doesn't match model ({self.img_size[0]}).")
-        assert (W == self.img_size[1], f"Input image width ({W}) doesn't match model ({self.img_size[1]}).")
+        # assert (H == self.img_size[0], f"Input image height ({H}) doesn't match model ({self.img_size[0]}).")
+        # assert (W == self.img_size[1], f"Input image width ({W}) doesn't match model ({self.img_size[1]}).")
+        if self.dynamic_img_pad:
+            x = comfy.ldm.common_dit.pad_to_patch_size(x, self.patch_size, padding_mode=self.padding_mode)
         x = self.proj(x)
         if self.flatten:
-            x = x.flatten(2).transpose(1, 2)  # BCHW -> BNC
+            x = x.flatten(2).transpose(1, 2) # BCHW -> BNC
         x = self.norm(x)
         return x
 
@@ -775,20 +842,29 @@ class PatchEmbedMS(nn.Module):
         norm_layer=None,
         flatten=True,
         bias=True,
+        dynamic_img_pad=True,
+        padding_mode='circular',
+        dtype=None,
+        device=None,
+        operations=None,
     ):
         super().__init__()
         kernel_size = kernel_size or patch_size
         patch_size = to_2tuple(patch_size)
         self.patch_size = patch_size
         self.flatten = flatten
+        self.dynamic_img_pad = dynamic_img_pad
+        self.padding_mode = padding_mode
         if not padding and kernel_size % 2 > 0:
             padding = get_same_padding(kernel_size)
-        self.proj = nn.Conv2d(
-            in_chans, embed_dim, kernel_size=kernel_size, stride=patch_size, padding=padding, bias=bias
+        self.proj = operations.Conv2d(
+            in_chans, embed_dim, kernel_size=kernel_size, stride=patch_size, padding=padding, bias=bias, dtype=dtype, device=device
         )
         self.norm = norm_layer(embed_dim) if norm_layer else nn.Identity()
 
     def forward(self, x):
+        if self.dynamic_img_pad:
+            x = comfy.ldm.common_dit.pad_to_patch_size(x, self.patch_size, padding_mode=self.padding_mode)
         x = self.proj(x)
         if self.flatten:
             x = x.flatten(2).transpose(1, 2)  # BCHW -> BNC

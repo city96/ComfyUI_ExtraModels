@@ -37,7 +37,7 @@ REGISTERED_ACT_DICT: dict[str, tuple[type, dict[str, any]]] = {
 }
 
 
-def build_act(name: str or None, **kwargs) -> nn.Module or None:
+def build_act(name, **kwargs):
     if name in REGISTERED_ACT_DICT:
         act_cls, default_args = copy.deepcopy(REGISTERED_ACT_DICT[name])
         for key in default_args:
@@ -50,7 +50,7 @@ def build_act(name: str or None, **kwargs) -> nn.Module or None:
         raise ValueError(f"do not support: {name}")
 
 
-def get_act_name(act: nn.Module or None) -> str or None:
+def get_act_name(act):
     if act is None:
         return None
     module2name = {}

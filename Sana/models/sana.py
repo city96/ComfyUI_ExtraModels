@@ -20,7 +20,6 @@ import os
 import numpy as np
 import torch
 import torch.nn as nn
-from timm.models.layers import DropPath
 
 from .basic_modules import DWMlp, GLUMBConv, MBConvPreGLU, Mlp
 from .sana_blocks import (
@@ -35,7 +34,7 @@ from .sana_blocks import (
     t2i_modulate,
 )
 from .norms import RMSNorm
-from .utils import auto_grad_checkpoint, to_2tuple
+from .utils import to_2tuple
 
 
 class SanaBlock(nn.Module):
@@ -55,10 +54,13 @@ class SanaBlock(nn.Module):
         ffn_type="mlp",
         mlp_acts=("silu", "silu", None),
         linear_head_dim=32,
+        dtype=None,
+        device=None,
+        operations=None,
         **block_kwargs,
     ):
         super().__init__()
-        self.norm1 = nn.LayerNorm(hidden_size, elementwise_affine=False, eps=1e-6)
+        self.norm1 = operations.LayerNorm(hidden_size, elementwise_affine=False, eps=1e-6, dtype=dtype, device=device)
         if attn_type == "flash":
             # flash self attention
             self.attn = FlashAttention(
@@ -66,20 +68,28 @@ class SanaBlock(nn.Module):
                 num_heads=num_heads,
                 qkv_bias=True,
                 qk_norm=qk_norm,
+                dtype=dtype,
+                device=device,
+                operations=operations,
                 **block_kwargs,
             )
         elif attn_type == "linear":
             # linear self attention
             # TODO: Here the num_heads set to 36 for tmp used
             self_num_heads = hidden_size // linear_head_dim
-            self.attn = LiteLA(hidden_size, hidden_size, heads=self_num_heads, eps=1e-8, qk_norm=qk_norm)
+            self.attn = LiteLA(
+                hidden_size, hidden_size, heads=self_num_heads, eps=1e-8, qk_norm=qk_norm,
+                dtype=dtype, device=device, operations=operations,
+            )
         elif attn_type == "vanilla":
             # vanilla self attention
-            self.attn = Attention(hidden_size, num_heads=num_heads, qkv_bias=True)
+            self.attn = Attention(
+                hidden_size, num_heads=num_heads, qkv_bias=True, dtype=dtype, device=device, operations=operations,
+            )
         else:
             raise ValueError(f"{attn_type} type is not defined.")
 
-        self.cross_attn = MultiHeadCrossAttention(hidden_size, num_heads, **block_kwargs)
+        self.cross_attn = MultiHeadCrossAttention(hidden_size, num_heads, dtype=dtype, device=device, operations=operations, **block_kwargs)
         self.norm2 = nn.LayerNorm(hidden_size, elementwise_affine=False, eps=1e-6)
         # to be compatible with lower version pytorch
         if ffn_type == "dwmlp":
@@ -94,6 +104,9 @@ class SanaBlock(nn.Module):
                 use_bias=(True, True, False),
                 norm=(None, None, None),
                 act=mlp_acts,
+                dtype=dtype,
+                device=device,
+                operations=operations,
             )
         elif ffn_type == "glumbconv_dilate":
             self.mlp = GLUMBConv(
@@ -103,6 +116,9 @@ class SanaBlock(nn.Module):
                 norm=(None, None, None),
                 act=mlp_acts,
                 dilation=2,
+                dtype=dtype,
+                device=device,
+                operations=operations,
             )
         elif ffn_type == "mbconvpreglu":
             self.mlp = MBConvPreGLU(
@@ -112,15 +128,19 @@ class SanaBlock(nn.Module):
                 use_bias=(True, True, False),
                 norm=None,
                 act=("silu", "silu", None),
+                dtype=dtype,
+                device=device,
+                operations=operations,
             )
         elif ffn_type == "mlp":
             approx_gelu = lambda: nn.GELU(approximate="tanh")
             self.mlp = Mlp(
-                in_features=hidden_size, hidden_features=int(hidden_size * mlp_ratio), act_layer=approx_gelu, drop=0
+                in_features=hidden_size, hidden_features=int(hidden_size * mlp_ratio), act_layer=approx_gelu, drop=0,
+                # dtype=dtype, device=device, operations=operations,
             )
         else:
             raise ValueError(f"{ffn_type} type is not defined.")
-        self.drop_path = DropPath(drop_path) if drop_path > 0.0 else nn.Identity()
+        self.drop_path = nn.Identity() #DropPath(drop_path) if drop_path > 0.0 else nn.Identity()
         self.scale_shift_table = nn.Parameter(torch.randn(6, hidden_size) / hidden_size**0.5)
 
     def forward(self, x, y, t, mask=None, **kwargs):
@@ -146,7 +166,7 @@ class Sana(nn.Module):
 
     def __init__(
         self,
-        input_size=32,
+        input_size=None,
         patch_size=1,
         in_channels=32,
         hidden_size=1152,
@@ -170,9 +190,13 @@ class Sana(nn.Module):
         patch_embed_kernel=None,
         mlp_acts=("silu", "silu", None),
         linear_head_dim=32,
+        dtype=None,
+        device=None,
+        operations=None,
         **kwargs,
     ):
         super().__init__()
+        self.dtype = dtype
         self.pred_sigma = pred_sigma
         self.in_channels = in_channels
         self.out_channels = in_channels * 2 if pred_sigma else in_channels
@@ -187,22 +211,36 @@ class Sana(nn.Module):
 
         kernel_size = patch_embed_kernel or patch_size
         self.x_embedder = PatchEmbed(
-            input_size, patch_size, in_channels, hidden_size, kernel_size=kernel_size, bias=True
+            input_size, patch_size, in_channels, hidden_size, kernel_size=kernel_size, bias=True,
+            dtype=dtype, device=device, operations=operations
         )
-        self.t_embedder = TimestepEmbedder(hidden_size)
+        self.t_embedder = TimestepEmbedder(hidden_size, dtype=dtype, device=device, operations=operations)
+
+        if input_size is not None:
+            self.base_size = input_size // self.patch_size
+        else:
+            self.base_size = None
+
         num_patches = self.x_embedder.num_patches
-        self.base_size = input_size // self.patch_size
-        # Will use fixed sin-cos embedding:
-        self.register_buffer("pos_embed", torch.zeros(1, num_patches, hidden_size))
+        if self.use_pe and num_patches is not None:
+            #Will use fixed sin-cos embedding:
+            self.register_buffer("pos_embed", torch.zeros(1, num_patches, hidden_size))
+        else:
+            self.pos_embed = None
 
         approx_gelu = lambda: nn.GELU(approximate="tanh")
-        self.t_block = nn.Sequential(nn.SiLU(), nn.Linear(hidden_size, 6 * hidden_size, bias=True))
+        self.t_block = nn.Sequential(
+            nn.SiLU(), operations.Linear(hidden_size, 6 * hidden_size, bias=True, dtype=dtype, device=device)
+        )
         self.y_embedder = CaptionEmbedder(
             in_channels=caption_channels,
             hidden_size=hidden_size,
             uncond_prob=class_dropout_prob,
             act_layer=approx_gelu,
             token_num=model_max_length,
+            dtype=dtype,
+            device=device,
+            operations=operations
         )
         if self.y_norm:
             self.attention_y_norm = RMSNorm(hidden_size, scale_factor=y_norm_scale_factor, eps=norm_eps)
@@ -220,29 +258,32 @@ class Sana(nn.Module):
                     ffn_type=ffn_type,
                     mlp_acts=mlp_acts,
                     linear_head_dim=linear_head_dim,
+                    dtype=dtype,
+                    device=device,
+                    operations=operations
                 )
                 for i in range(depth)
             ]
         )
-        self.final_layer = T2IFinalLayer(hidden_size, patch_size, self.out_channels)
+        self.final_layer = T2IFinalLayer(
+            hidden_size, patch_size, self.out_channels, dtype=dtype, device=device, operations=operations
+        )
 
-    def forward(self, x, timestep, y, mask=None, data_info=None, **kwargs):
+    def forward(self, x, timestep, context, mask=None, data_info=None, **kwargs):
         """
         Forward pass of Sana.
         x: (N, C, H, W) tensor of spatial inputs (images or latent representations of images)
         t: (N,) tensor of diffusion timesteps
         y: (N, 1, 120, C) tensor of class labels
         """
-        x = x.to(self.dtype)
-        timestep = timestep.to(self.dtype)
-        y = y.to(self.dtype)
-        pos_embed = self.pos_embed.to(self.dtype)
+        y = context # remap comfy cond name
         self.h, self.w = x.shape[-2] // self.patch_size, x.shape[-1] // self.patch_size
         if self.use_pe:
+            pos_embed = self.pos_embed.to(x.dtype)
             x = self.x_embedder(x) + pos_embed  # (N, T, D), where T = H * W / patch_size ** 2
         else:
             x = self.x_embedder(x)
-        t = self.t_embedder(timestep.to(x.dtype))  # (N, D)
+        t = self.t_embedder(timestep, x.dtype)  # (N, D)
         t0 = self.t_block(t)
         y = self.y_embedder(y, self.training)  # (N, 1, L, D)
         if self.y_norm:
@@ -257,7 +298,7 @@ class Sana(nn.Module):
             y_lens = [y.shape[2]] * y.shape[0]
             y = y.squeeze(1).view(1, -1, x.shape[-1])
         for block in self.blocks:
-            x = auto_grad_checkpoint(block, x, y, t0, y_lens)  # (N, T, D) #support grad checkpoint
+            x = block(x, y, t0, y_lens) # (N, T, D)
         x = self.final_layer(x, t)  # (N, T, patch_size ** 2 * out_channels)
         x = self.unpatchify(x)  # (N, out_channels, H, W)
         return x
@@ -291,39 +332,6 @@ class Sana(nn.Module):
         x = torch.einsum("nhwpqc->nchpwq", x)
         imgs = x.reshape(shape=(x.shape[0], c, h * p, h * p))
         return imgs
-
-    def initialize_weights(self):
-        # Initialize transformer layers:
-        def _basic_init(module):
-            if isinstance(module, nn.Linear):
-                torch.nn.init.xavier_uniform_(module.weight)
-                if module.bias is not None:
-                    nn.init.constant_(module.bias, 0)
-
-        self.apply(_basic_init)
-
-        if self.use_pe:
-            # Initialize (and freeze) pos_embed by sin-cos embedding:
-            pos_embed = get_2d_sincos_pos_embed(
-                self.pos_embed.shape[-1],
-                int(self.x_embedder.num_patches**0.5),
-                pe_interpolation=self.pe_interpolation,
-                base_size=self.base_size,
-            )
-            self.pos_embed.data.copy_(torch.from_numpy(pos_embed).float().unsqueeze(0))
-
-        # Initialize patch_embed like nn.Linear (instead of nn.Conv2d):
-        w = self.x_embedder.proj.weight.data
-        nn.init.xavier_uniform_(w.view([w.shape[0], -1]))
-
-        # Initialize timestep embedding MLP:
-        nn.init.normal_(self.t_embedder.mlp[0].weight, std=0.02)
-        nn.init.normal_(self.t_embedder.mlp[2].weight, std=0.02)
-        nn.init.normal_(self.t_block[1].weight, std=0.02)
-
-        # Initialize caption embedding MLP:
-        nn.init.normal_(self.y_embedder.y_proj.fc1.weight, std=0.02)
-        nn.init.normal_(self.y_embedder.y_proj.fc2.weight, std=0.02)
 
 
 def get_2d_sincos_pos_embed(embed_dim, grid_size, cls_token=False, extra_tokens=0, pe_interpolation=1.0, base_size=16):
