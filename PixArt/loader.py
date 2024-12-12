@@ -9,8 +9,8 @@ import comfy.supported_models_base
 import comfy.supported_models
 import comfy.latent_formats
 
-from .model.pixart import PixArt
-from .model.pixartms import PixArtMS
+from .models.pixart import PixArt
+from .models.pixartms import PixArtMS
 from .diffusers_convert import convert_state_dict
 from ..utils.loader import load_state_dict_from_config
 from ..text_encoders.pixart.tenc import PixArtTokenizer, PixArtT5XXL

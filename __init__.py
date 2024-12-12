@@ -6,11 +6,7 @@ except ImportError:
 else:
     NODE_CLASS_MAPPINGS = {}
 
-    # All text encoders
-    from .text_encoders.nodes import NODE_CLASS_MAPPINGS as Tenc_Nodes
-    NODE_CLASS_MAPPINGS.update(Tenc_Nodes)
-
-    # Generic nodes
+    # Generic/universal nodes
     from .nodes import NODE_CLASS_MAPPINGS as Base_Nodes
     NODE_CLASS_MAPPINGS.update(Base_Nodes)
 
