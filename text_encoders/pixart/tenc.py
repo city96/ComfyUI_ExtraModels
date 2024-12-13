@@ -1,10 +1,12 @@
+import os
+import torch
+
 from comfy import sd1_clip
 import comfy.text_encoders.t5
 import comfy.text_encoders.sd3_clip
 import comfy.model_management
+
 from transformers import T5TokenizerFast
-import torch
-import os
 
 class T5XXLModel(comfy.text_encoders.sd3_clip.T5XXLModel):
     def __init__(self, **kwargs):

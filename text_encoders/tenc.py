@@ -4,8 +4,10 @@ from enum import Enum
 import comfy.sd
 import comfy.utils
 import comfy.text_encoders
+import comfy.model_management
 
 from .pixart.tenc import pixart_te, PixArtTokenizer
+from .sana.tenc import SanaClipModel, SanaTokenizer
 
 class TencType(Enum):
     # offset in case we ever integrate w/ original
@@ -44,6 +46,8 @@ def load_text_encoder_state_dicts(state_dicts=[], embedding_directory=None, clip
     for i in range(len(clip_data)):
         if "transformer.resblocks.0.ln_1.weight" in clip_data[i]:
             clip_data[i] = comfy.utils.clip_text_transformers_convert(clip_data[i], "", "")
+        elif "model.layers.25.post_feedforward_layernorm.weight" in clip_data[i]:
+            clip_data[i] = {k[len("model."):]:v for k,v in clip_data[i].items()}
         else:
             if "text_projection" in clip_data[i]:
                 clip_data[i]["text_projection.weight"] = clip_data[i]["text_projection"].transpose(0, 1) #old models saved with the CLIPSave node
@@ -54,6 +58,11 @@ def load_text_encoder_state_dicts(state_dicts=[], embedding_directory=None, clip
     if clip_type == TencType.PixArt:
         clip_target.clip = pixart_te(**comfy.sd.t5xxl_detect(clip_data))
         clip_target.tokenizer = PixArtTokenizer
+    elif clip_type == TencType.Sana:
+        clip_target.clip = SanaClipModel
+        clip_target.tokenizer = SanaTokenizer
+    else:
+        raise NotImplementedError(f"Unknown tenc: {clip_type}")
 
     parameters = 0
     tokenizer_data = {}

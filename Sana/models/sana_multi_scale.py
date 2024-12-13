@@ -301,6 +301,8 @@ class SanaMS(Sana):
         """
         bs = x.shape[0]
         y = context
+        if len(y.shape) == 3:
+            y = y.unsqueeze(1)
         self.h, self.w = x.shape[-2] // self.patch_size, x.shape[-1] // self.patch_size
         if self.use_pe:
             x = self.x_embedder(x)
