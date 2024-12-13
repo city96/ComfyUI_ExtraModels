@@ -33,7 +33,7 @@ class GemmaLoader:
             devices.append(f"cuda:{k}")
         return {
             "required": {
-                "model_name": (["google/gemma-2-2b-it", "unsloth/gemma-2-2b-it-bnb-4bit"],),
+                "model_name": (["Efficient-Large-Model/gemma-2-2b-it", "google/gemma-2-2b-it", "unsloth/gemma-2-2b-it-bnb-4bit"],),
                 "device": (devices, {"default":"cpu"}),
                 "dtype": (dtypes,),
             }
