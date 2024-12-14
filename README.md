@@ -23,7 +23,6 @@ Clone the repository to your custom nodes folder, assuming haven't installed in 
 To install the requirements on windows, run these commands in the same window:
 ```
 .\python_embeded\python.exe -s -m pip install -r .\ComfyUI\custom_nodes\ComfyUI_ExtraModels\requirements.txt
-.\python_embeded\python.exe -s -m pip install bitsandbytes --prefer-binary --extra-index-url=https://jllllll.github.io/bitsandbytes-windows-webui
 ```
 
 To update, open the command line window like before and run the following commands:
@@ -39,6 +38,16 @@ Alternatively, use the manager, assuming it has an update function.
 ## Sana
 
 [Original Repo](https://github.com/NVlabs/Sana)
+
+> [!CAUTION]
+> As many people have had issues with Sana, it's for now recommended to try the fork by the Sana devs, which auto download all models:
+> 
+> [Readme](https://github.com/NVlabs/Sana/blob/main/asset/docs/ComfyUI/comfyui.md) | [Fork repo](https://github.com/Efficient-Large-Model/ComfyUI_ExtraModels)
+
+A full rewrite to have better integration is in progress in [this PR](https://github.com/city96/ComfyUI_ExtraModels/pull/92) but isn't ready yet.
+
+https://github.com/NVlabs/Sana/blob/main/asset/docs/ComfyUI/comfyui.md
+https://github.com/Efficient-Large-Model/ComfyUI_ExtraModels
 
 ### Model info / implementation
 - Uses Gemma2 2B as the text encoder
