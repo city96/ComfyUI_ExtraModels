@@ -40,7 +40,7 @@ Alternatively, use the manager, assuming it has an update function.
 [Original Repo](https://github.com/NVlabs/Sana)
 
 > [!CAUTION]
-> As many people have had issues with Sana, it's for now recommended to try the fork by the Sana devs, which auto download all models:
+> As many people have had issues with Sana, it's for now recommended to try the fork by the Sana devs, which auto downloads all models:
 > 
 > [Readme](https://github.com/NVlabs/Sana/blob/main/asset/docs/ComfyUI/comfyui.md) | [Fork repo](https://github.com/Efficient-Large-Model/ComfyUI_ExtraModels)
 
