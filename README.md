@@ -59,7 +59,7 @@ https://github.com/Efficient-Large-Model/ComfyUI_ExtraModels
 2. Place them in your checkpoints folder
 3. Load them with the correct PixArt checkpoint loader
 4. Use the "Gemma Loader" node - it should automatically download the requested model from Huggingface - Recommended to use the 4bit quantized model on CPU when low on memory.
-5. Download the VAE from [here](https://huggingface.co/Efficient-Large-Model/Sana_1600M_1024px_diffusers/blob/main/vae/diffusion_pytorch_model.safetensors) and place it in your VAE folder after renaming it.
+5. Download the VAE from [here](https://huggingface.co/Efficient-Large-Model/Sana_1600M_1024px_diffusers/blob/main/vae/diffusion_pytorch_model.safetensors) or [here](https://huggingface.co/mit-han-lab/dc-ae-f32c32-sana-1.0/blob/main/model.safetensors) and place it in your VAE folder after renaming it.
 6. Use either the "Empty Sana Latent Image" or "Empty DCAE Latent Image" node for the latent input when doing txt2img.
 
 [Sample workflow](https://github.com/user-attachments/files/18027854/SanaV1.json)
