@@ -48,7 +48,7 @@ REGISTERED_NORMALIZATION_DICT: dict[str, tuple[type, dict[str, any]]] = {
 }
 
 
-def build_norm(name="bn2d", num_features=None, affine=True, **kwargs) -> nn.Module or None:
+def build_norm(name="bn2d", num_features=None, affine=True, **kwargs):
     if name in ["ln", "ln2d"]:
         kwargs["normalized_shape"] = num_features
         kwargs["elementwise_affine"] = affine
@@ -67,7 +67,7 @@ def build_norm(name="bn2d", num_features=None, affine=True, **kwargs) -> nn.Modu
         raise ValueError("do not support: %s" % name)
 
 
-def get_norm_name(norm: nn.Module or None) -> str or None:
+def get_norm_name(norm):
     if norm is None:
         return None
     module2name = {}
@@ -171,7 +171,7 @@ def remove_bn(model: nn.Module) -> None:
             m.forward = lambda x: x
 
 
-def set_norm_eps(model: nn.Module, eps: float or None = None, momentum: float or None = None) -> None:
+def set_norm_eps(model, eps=None, momentum=None):
     for m in model.modules():
         if isinstance(m, (nn.GroupNorm, nn.LayerNorm, _BatchNorm)):
             if eps is not None:
