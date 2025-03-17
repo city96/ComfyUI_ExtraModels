@@ -58,7 +58,7 @@ class GemmaLoader:
                 snapshot_download('unsloth/gemma-2-2b-it-bnb-4bit', local_dir=text_encoder_dir)
         elif model_name == 'Efficient-Large-Model/gemma-2-2b-it':
             text_encoder_dir = os.path.join(folder_paths.models_dir, 'text_encoders', 'models--Efficient-Large-Model--gemma-2-2b-it')
-            if not os.path.exists(os.path.join(text_encoder_dir, 'model.safetensors')):
+            if not os.path.exists(os.path.join(text_encoder_dir, 'gemma-2-2b-it.safetensors')):
                 snapshot_download('Efficient-Large-Model/gemma-2-2b-it', local_dir=text_encoder_dir)
         else:
             raise ValueError('Not implemented!')
